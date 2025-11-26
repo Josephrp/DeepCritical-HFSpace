@@ -66,3 +66,4 @@ logs/
 .mypy_cache/
 .coverage
 htmlcov/
+# Trigger rebuild Wed Nov 26 17:51:41 EST 2025
