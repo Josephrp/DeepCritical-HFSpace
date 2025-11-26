@@ -132,10 +132,5 @@ exclude_lines = [
     "raise NotImplementedError",
 ]
 
-[dependency-groups]
-dev = [
-    "typer>=0.20.0",
-]
-
 # Note: agent-framework-core is optional and installed locally for magentic mode
 # CI skips tests that require it via pytest.importorskip
