@@ -1,6 +1,8 @@
 """Analysis agent for statistical analysis using Modal code execution."""
 
+import asyncio
 from collections.abc import AsyncIterable
+from functools import partial
 from typing import TYPE_CHECKING, Any
 
 from agent_framework import (
@@ -15,7 +17,11 @@ from pydantic import BaseModel, Field
 from pydantic_ai import Agent
 
 from src.agent_factory.judges import get_model
-from src.tools.code_execution import CodeExecutionError, get_code_executor
+from src.tools.code_execution import (
+    CodeExecutionError,
+    get_code_executor,
+    get_sandbox_library_prompt,
+)
 from src.utils.models import Evidence
 
 if TYPE_CHECKING:
@@ -60,8 +66,14 @@ class AnalysisAgent(BaseAgent):  # type: ignore[misc]
         )
         self._evidence_store = evidence_store
         self._embeddings = embedding_service
-        self._code_executor = get_code_executor()
+        self._code_executor: Any = None  # Lazy initialized
         self._agent: Agent[None, str] | None = None  # LLM for code generation
+
+    def _get_code_executor(self) -> Any:
+        """Lazy initialization of code executor (avoids failing if Modal not configured)."""
+        if self._code_executor is None:
+            self._code_executor = get_code_executor()
+        return self._code_executor
 
     def _get_agent(self) -> Agent[None, str]:
         """Lazy initialization of LLM agent."""
@@ -75,7 +87,8 @@ class AnalysisAgent(BaseAgent):  # type: ignore[misc]
 
     def _get_system_prompt(self) -> str:
         """System prompt for code generation."""
-        return """You are a biomedical data scientist specializing in statistical analysis.
+        library_versions = get_sandbox_library_prompt()
+        return f"""You are a biomedical data scientist specializing in statistical analysis.
 
 Your task: Generate Python code to analyze research evidence and test hypotheses.
 
@@ -89,12 +102,7 @@ Guidelines:
 7. Set a variable called 'result' with final verdict
 
 Available libraries:
-- pandas==2.2.0
-- numpy==1.26.4
-- scipy==1.11.4
-- matplotlib==3.8.2
-- scikit-learn==1.4.0
-- statsmodels==0.14.1
+{library_versions}
 
 Output format:
 Return ONLY executable Python code, no explanations or markdown.
@@ -119,10 +127,8 @@ Return ONLY executable Python code, no explanations or markdown.
         if not evidence:
             return self._error_response("No evidence available. Run SearchAgent first.")
 
-        # Get primary hypothesis
-        primary = hypotheses[0] if hypotheses else None
-        if not primary:
-            return self._error_response("No primary hypothesis found.")
+        # Get primary hypothesis (guaranteed to exist after check above)
+        primary = hypotheses[0]
 
         # Retrieve relevant evidence using RAG (if available)
         relevant_evidence = await self._retrieve_relevant_evidence(primary, evidence)
@@ -136,8 +142,12 @@ Return ONLY executable Python code, no explanations or markdown.
             code_result = await agent.run(code_prompt)
             generated_code = code_result.output
 
-            # Execute code in Modal sandbox
-            execution_result = self._code_executor.execute(generated_code, timeout=120)
+            # Execute code in Modal sandbox (run in thread to avoid blocking event loop)
+            loop = asyncio.get_running_loop()
+            executor = self._get_code_executor()
+            execution_result = await loop.run_in_executor(
+                None, partial(executor.execute, generated_code, timeout=120)
+            )
 
             if not execution_result["success"]:
                 return self._error_response(f"Code execution failed: {execution_result['error']}")
@@ -167,14 +177,13 @@ Return ONLY executable Python code, no explanations or markdown.
     async def _retrieve_relevant_evidence(
         self, hypothesis: Any, all_evidence: list[Evidence]
     ) -> list[Evidence]:
-        """Retrieve most relevant evidence using RAG (if available)."""
-        if not self._embeddings:
-            # No RAG available, return top N evidence
-            return all_evidence[:10]
+        """Retrieve most relevant evidence using RAG (if available).
 
-        # Use embeddings to find relevant evidence
-        # TODO: Implement semantic search with embeddings service
-        # For now, just return all evidence
+        TODO: When embeddings service is available (self._embeddings),
+        use semantic search to find evidence most relevant to the hypothesis.
+        For now, returns top 10 evidence items.
+        """
+        # Future: Use self._embeddings for semantic search
         return all_evidence[:10]
 
     def _create_code_generation_prompt(

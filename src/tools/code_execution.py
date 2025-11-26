@@ -11,6 +11,27 @@ import structlog
 
 logger = structlog.get_logger(__name__)
 
+# Shared library versions for Modal sandbox - used by both executor and LLM prompts
+# Keep these in sync to avoid version mismatch between generated code and execution
+SANDBOX_LIBRARIES: dict[str, str] = {
+    "pandas": "2.2.0",
+    "numpy": "1.26.4",
+    "scipy": "1.11.4",
+    "matplotlib": "3.8.2",
+    "scikit-learn": "1.4.0",
+    "statsmodels": "0.14.1",
+}
+
+
+def get_sandbox_library_list() -> list[str]:
+    """Get list of library==version strings for Modal image."""
+    return [f"{lib}=={ver}" for lib, ver in SANDBOX_LIBRARIES.items()]
+
+
+def get_sandbox_library_prompt() -> str:
+    """Get formatted library versions for LLM prompts."""
+    return "\n".join(f"- {lib}=={ver}" for lib, ver in SANDBOX_LIBRARIES.items())
+
 
 class CodeExecutionError(Exception):
     """Raised when code execution fails."""
@@ -45,8 +66,9 @@ class ModalCodeExecutor:
     def __init__(self) -> None:
         """Initialize Modal code executor.
 
-        Raises:
-            ConfigurationError: If Modal credentials are not configured.
+        Note:
+            Logs a warning if Modal credentials are not configured.
+            Execution will fail at runtime without valid credentials.
         """
         # Check for Modal credentials
         self.modal_token_id = os.getenv("MODAL_TOKEN_ID")
@@ -90,12 +112,7 @@ class ModalCodeExecutor:
 
             # Define scientific computing image with common libraries
             scientific_image = modal.Image.debian_slim(python_version="3.11").uv_pip_install(
-                "pandas==2.2.0",
-                "numpy==1.26.4",
-                "scipy==1.11.4",
-                "matplotlib==3.8.2",
-                "scikit-learn==1.4.0",
-                "statsmodels==0.14.1",
+                *get_sandbox_library_list()
             )
 
             # Create sandbox with security restrictions

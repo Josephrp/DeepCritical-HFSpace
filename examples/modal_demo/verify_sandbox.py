@@ -8,7 +8,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from src.tools.code_execution import get_code_executor
+from src.tools.code_execution import SANDBOX_LIBRARIES, get_code_executor
 
 
 def test_1_hostname_check():
@@ -145,9 +145,9 @@ print(f"statsmodels: {statsmodels.__version__}")
 
     # Check if versions match what we specified in code_execution.py
     expected_versions = {
-        "pandas: 2.2.0": True,
-        "numpy: 1.26.4": True,
-        "scipy: 1.11.4": True,
+        f"pandas: {SANDBOX_LIBRARIES['pandas']}": True,
+        f"numpy: {SANDBOX_LIBRARIES['numpy']}": True,
+        f"scipy: {SANDBOX_LIBRARIES['scipy']}": True,
     }
 
     matches = 0

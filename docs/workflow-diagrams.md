@@ -398,7 +398,7 @@ graph TB
         PubMed[PubMed API]
         ArXiv[arXiv API]
         BioRxiv[bioRxiv API]
-        Docker[Docker Sandbox]
+        Modal[Modal Sandbox]
         ChromaDB[(ChromaDB)]
     end
 
@@ -414,7 +414,7 @@ graph TB
     Server1 --> PubMed
     Server1 --> ArXiv
     Server1 --> BioRxiv
-    Server2 --> Docker
+    Server2 --> Modal
     Server3 --> ChromaDB
 
     style Manager fill:#ffe6e6
@@ -520,7 +520,7 @@ graph LR
     DC -->|Preprint search| ArXiv[arXiv API<br/>Scientific preprints]
     DC -->|Biology search| BioRxiv[bioRxiv API<br/>Biology preprints]
     DC -->|Agent reasoning| Claude[Claude API<br/>Sonnet 4 / Opus]
-    DC -->|Code execution| Docker[Docker Sandbox<br/>Safe Python env]
+    DC -->|Code execution| Modal[Modal Sandbox<br/>Safe Python env]
     DC -->|Vector storage| Chroma[ChromaDB<br/>Embeddings & RAG]
 
     DC -->|Deployed on| HF[HuggingFace Spaces<br/>Gradio 6.0]
@@ -529,7 +529,7 @@ graph LR
     ArXiv -->|Results| DC
     BioRxiv -->|Results| DC
     Claude -->|Responses| DC
-    Docker -->|Output| DC
+    Modal -->|Output| DC
     Chroma -->|Context| DC
 
     DC -->|Research report| User
@@ -540,7 +540,7 @@ graph LR
     style ArXiv fill:#e6f3ff
     style BioRxiv fill:#e6f3ff
     style Claude fill:#ffd6d6
-    style Docker fill:#f0f0f0
+    style Modal fill:#f0f0f0
     style Chroma fill:#ffe6f0
     style HF fill:#d4edda
 ```
