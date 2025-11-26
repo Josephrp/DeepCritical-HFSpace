@@ -1,10 +1,10 @@
-"""Integration tests for MCP server functionality."""
+"""Integration tests for MCP tool wrappers with live API calls."""
 
 import pytest
 
 
-class TestMCPServerIntegration:
-    """Integration tests for MCP server (requires running app)."""
+class TestMCPToolsLive:
+    """Integration tests for MCP tools against live APIs (PubMed, etc.)."""
 
     @pytest.mark.integration
     @pytest.mark.asyncio

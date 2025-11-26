@@ -23,7 +23,7 @@
 
 ### What MCP Enables
 
-```
+```text
 Current State:
   Our Tools → Called directly by Python code → Only our app can use them
 
@@ -105,12 +105,12 @@ async def search_pubmed(query: str, max_results: int = 10) -> str:
 ### 3.3 MCP Server URL
 
 Once launched:
-```
+```text
 http://localhost:7860/gradio_api/mcp/
 ```
 
 Or on HuggingFace Spaces:
-```
+```text
 https://[space-id].hf.space/gradio_api/mcp/
 ```
 
@@ -806,7 +806,7 @@ Phase 12 is **COMPLETE** when:
 
 ## 12. Architecture After Phase 12
 
-```
+```text
 ┌────────────────────────────────────────────────────────────────┐
 │                      Claude Desktop / Cursor                   │
 │                           (MCP Client)                         │

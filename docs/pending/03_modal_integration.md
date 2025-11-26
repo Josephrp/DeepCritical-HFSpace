@@ -49,22 +49,24 @@ import numpy as np
 
 ### Step 1: Wire Into Agent Pipeline
 
-Add a `StatisticalAnalysisAgent` that uses Modal:
+Add a `StatisticalAnalyzer` service that uses Modal:
 
 ```python
-# src/agents/analysis_agent.py
+# src/services/statistical_analyzer.py
+import asyncio
 from src.tools.code_execution import get_code_executor
 
-class AnalysisAgent:
+class StatisticalAnalyzer:
     """Run statistical analysis on evidence using Modal sandbox."""
 
     async def analyze(self, evidence: list[Evidence], query: str) -> str:
         # 1. LLM generates analysis code
         code = await self._generate_analysis_code(evidence, query)
 
-        # 2. Execute in Modal sandbox
+        # 2. Execute in Modal sandbox (run sync executor in thread pool)
         executor = get_code_executor()
-        result = executor.execute(code)
+        loop = asyncio.get_event_loop()
+        result = await loop.run_in_executor(None, executor.execute, code)
 
         # 3. Return results
         return result["stdout"]

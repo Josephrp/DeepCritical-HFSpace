@@ -41,7 +41,9 @@ src/
 ├── tools/                      # Search tools
 │   ├── __init__.py
 │   ├── pubmed.py               # PubMed E-utilities tool
-│   ├── websearch.py            # DuckDuckGo search tool
+│   ├── clinicaltrials.py       # ClinicalTrials.gov API
+│   ├── biorxiv.py              # bioRxiv/medRxiv preprints
+│   ├── code_execution.py       # Modal sandbox execution
 │   └── search_handler.py       # Orchestrates multiple tools
 ├── prompts/                    # Prompt templates
 │   ├── __init__.py
@@ -61,7 +63,8 @@ tests/
 ├── unit/
 │   ├── tools/
 │   │   ├── test_pubmed.py
-│   │   ├── test_websearch.py
+│   │   ├── test_clinicaltrials.py
+│   │   ├── test_biorxiv.py
 │   │   └── test_search_handler.py
 │   ├── agent_factory/
 │   │   └── test_judges.py
@@ -202,7 +205,7 @@ Structured Research Report
 
 ### Hackathon Integration (Phases 12-14)
 
-12. **[Phase 12 Spec: MCP Server](12_phase_mcp_server.md)** 📝 P0 - REQUIRED
+12. **[Phase 12 Spec: MCP Server](12_phase_mcp_server.md)** ✅ COMPLETE
 13. **[Phase 13 Spec: Modal Pipeline](13_phase_modal_integration.md)** 📝 P1 - $2,500
 14. **[Phase 14 Spec: Demo & Submission](14_phase_demo_submission.md)** 📝 P0 - REQUIRED
 
@@ -223,11 +226,11 @@ Structured Research Report
 | Phase 9: Source Cleanup | ✅ COMPLETE | Remove DuckDuckGo |
 | Phase 10: ClinicalTrials | ✅ COMPLETE | ClinicalTrials.gov API |
 | Phase 11: bioRxiv | ✅ COMPLETE | Preprint search |
-| Phase 12: MCP Server | 📝 SPEC READY | MCP protocol integration |
+| Phase 12: MCP Server | ✅ COMPLETE | MCP protocol integration |
 | Phase 13: Modal Pipeline | 📝 SPEC READY | Sandboxed code execution |
 | Phase 14: Demo & Submit | 📝 SPEC READY | Hackathon submission |
 
-*Phases 1-11 COMPLETE. Phases 12-14 for hackathon compliance.*
+*Phases 1-12 COMPLETE. Phases 13-14 for hackathon prizes.*
 
 ---
 
