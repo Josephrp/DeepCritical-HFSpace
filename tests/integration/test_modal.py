@@ -4,6 +4,9 @@ import pytest
 
 from src.utils.config import settings
 
+# Check if any LLM API key is available
+_llm_available = bool(settings.openai_api_key or settings.anthropic_api_key)
+
 
 @pytest.mark.integration
 @pytest.mark.skipif(not settings.modal_available, reason="Modal not configured")
@@ -28,8 +31,9 @@ class TestModalIntegration:
         assert "6" in result["stdout"]
 
     @pytest.mark.asyncio
+    @pytest.mark.skipif(not _llm_available, reason="LLM API key not configured")
     async def test_statistical_analyzer_works(self) -> None:
-        """StatisticalAnalyzer should work end-to-end."""
+        """StatisticalAnalyzer should work end-to-end (requires Modal + LLM)."""
         from src.services.statistical_analyzer import get_statistical_analyzer
         from src.utils.models import Citation, Evidence
 

@@ -9,8 +9,11 @@ The AnalysisAgent (in src/agents/) wraps this service for magentic mode.
 
 import asyncio
 import re
-from functools import partial
-from typing import Any
+from functools import lru_cache, partial
+from typing import Any, Literal
+
+# Type alias for verdict values
+VerdictType = Literal["SUPPORTED", "REFUTED", "INCONCLUSIVE"]
 
 from pydantic import BaseModel, Field
 from pydantic_ai import Agent
@@ -27,7 +30,7 @@ from src.utils.models import Evidence
 class AnalysisResult(BaseModel):
     """Result of statistical analysis."""
 
-    verdict: str = Field(
+    verdict: VerdictType = Field(
         description="SUPPORTED, REFUTED, or INCONCLUSIVE",
     )
     confidence: float = Field(ge=0.0, le=1.0, description="Confidence in verdict (0-1)")
@@ -175,7 +178,9 @@ Generate executable Python code to analyze this evidence."""
 
         lines = []
         for i, ev in enumerate(evidence[:5], 1):
-            lines.append(f"{i}. {ev.content[:200]}...")
+            content = ev.content
+            truncated = content[:200] + ("..." if len(content) > 200 else "")
+            lines.append(f"{i}. {truncated}")
             lines.append(f"   Source: {ev.citation.title}")
             lines.append(f"   Relevance: {ev.relevance:.0%}\n")
 
@@ -191,7 +196,7 @@ Generate executable Python code to analyze this evidence."""
         stdout_upper = stdout.upper()
 
         # Extract verdict with robust word-boundary matching
-        verdict = "INCONCLUSIVE"
+        verdict: VerdictType = "INCONCLUSIVE"
         if re.search(r"\bSUPPORTED\b", stdout_upper) and not re.search(
             r"\b(?:NOT|UN)SUPPORTED\b", stdout_upper
         ):
@@ -244,13 +249,7 @@ Generate executable Python code to analyze this evidence."""
         return 0.70  # Default
 
 
-# Singleton for reuse
-_analyzer: StatisticalAnalyzer | None = None
-
-
+@lru_cache(maxsize=1)
 def get_statistical_analyzer() -> StatisticalAnalyzer:
-    """Get or create singleton StatisticalAnalyzer instance."""
-    global _analyzer
-    if _analyzer is None:
-        _analyzer = StatisticalAnalyzer()
-    return _analyzer
+    """Get or create singleton StatisticalAnalyzer instance (thread-safe via lru_cache)."""
+    return StatisticalAnalyzer()

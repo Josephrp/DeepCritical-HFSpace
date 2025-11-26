@@ -15,6 +15,15 @@ from src.tools.code_execution import get_code_executor
 from src.utils.config import settings
 
 
+def print_result(result: dict) -> None:
+    """Print execution result, surfacing errors when they occur."""
+    if result.get("success"):
+        print(f"  {result['stdout'].strip()}\n")
+    else:
+        error = result.get("error") or result.get("stderr", "").strip() or "Unknown error"
+        print(f"  ERROR: {error}\n")
+
+
 async def main() -> None:
     """Verify Modal sandbox isolation."""
     if not settings.modal_available:
@@ -33,7 +42,7 @@ async def main() -> None:
     print("Test 1: Check hostname (should NOT be your machine)")
     code1 = "import socket; print(f'Hostname: {socket.gethostname()}')"
     result1 = await loop.run_in_executor(None, partial(executor.execute, code1))
-    print(f"  {result1['stdout'].strip()}\n")
+    print_result(result1)
 
     # Test 2: Scientific libraries
     print("Test 2: Verify scientific libraries")
@@ -46,7 +55,7 @@ print(f"numpy: {np.__version__}")
 print(f"scipy: {scipy.__version__}")
 """
     result2 = await loop.run_in_executor(None, partial(executor.execute, code2))
-    print(f"  {result2['stdout'].strip()}\n")
+    print_result(result2)
 
     # Test 3: Network blocked
     print("Test 3: Verify network isolation")
@@ -59,7 +68,7 @@ except Exception:
     print("Network: BLOCKED (as expected)")
 """
     result3 = await loop.run_in_executor(None, partial(executor.execute, code3))
-    print(f"  {result3['stdout'].strip()}\n")
+    print_result(result3)
 
     # Test 4: Real statistics
     print("Test 4: Execute statistical analysis")
@@ -76,7 +85,7 @@ print(f"P-value: {p_val:.4f}")
 print(f"Verdict: {'SUPPORTED' if p_val < 0.05 else 'INCONCLUSIVE'}")
 """
     result4 = await loop.run_in_executor(None, partial(executor.execute, code4))
-    print(f"  {result4['stdout'].strip()}\n")
+    print_result(result4)
 
     print("=" * 60)
     print("All tests complete - Modal sandbox verified!")
