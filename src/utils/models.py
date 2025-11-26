@@ -213,7 +213,8 @@ class ResearchReport(BaseModel):
     conclusion: str = Field(description="Overall conclusion")
 
     references: list[dict[str, str]] = Field(
-        description="Formatted references with title, authors, source, URL"
+        default_factory=list,
+        description="Formatted references with title, authors, source, URL",
     )
 
     # Metadata
