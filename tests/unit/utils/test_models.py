@@ -1,8 +1,11 @@
 """Unit tests for data models."""
 
+import pytest
+
 from src.utils.models import ReportSection, ResearchReport
 
 
+@pytest.mark.unit
 class TestResearchReport:
     """Tests for ResearchReport model."""
 
