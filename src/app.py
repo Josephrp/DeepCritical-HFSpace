@@ -23,6 +23,7 @@ from src.tools.biorxiv import BioRxivTool
 from src.tools.clinicaltrials import ClinicalTrialsTool
 from src.tools.pubmed import PubMedTool
 from src.tools.search_handler import SearchHandler
+from src.utils.config import settings
 from src.utils.models import OrchestratorConfig
 
 
@@ -66,10 +67,10 @@ def configure_orchestrator(
         if user_api_key:
             if api_provider == "anthropic":
                 anthropic_provider = AnthropicProvider(api_key=user_api_key)
-                model = AnthropicModel("claude-sonnet-4-20250514", provider=anthropic_provider)
+                model = AnthropicModel(settings.anthropic_model, provider=anthropic_provider)
             else:
                 openai_provider = OpenAIProvider(api_key=user_api_key)
-                model = OpenAIModel("gpt-4o", provider=openai_provider)
+                model = OpenAIModel(settings.openai_model, provider=openai_provider)
         judge_handler = JudgeHandler(model=model)
 
     return create_orchestrator(
