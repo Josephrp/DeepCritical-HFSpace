@@ -109,8 +109,8 @@ Output format: Return ONLY executable Python code, no explanations.""",
         Returns:
             AnalysisResult with verdict and statistics
         """
-        # Build analysis prompt
-        evidence_summary = self._summarize_evidence(evidence[:10])
+        # Build analysis prompt (method handles slicing internally)
+        evidence_summary = self._summarize_evidence(evidence)
         hypothesis_text = ""
         if hypothesis:
             hypothesis_text = (
