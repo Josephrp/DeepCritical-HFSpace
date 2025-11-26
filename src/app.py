@@ -345,6 +345,7 @@ def main() -> None:
         share=False,
         mcp_server=True,
         css=css,
+        ssr_mode=False,  # Fix for intermittent loading/hydration issues in HF Spaces
     )
 
 
