@@ -185,15 +185,23 @@ def create_demo() -> Any:
         title="DeepCritical - Drug Repurposing Research Agent",
         fill_height=True,
     ) as demo:
-        # Main chat interface - title/description inside ChatInterface for proper layout
+        # 1. Title & Description (Top of page)
+        gr.Markdown("""
+        # 🧬 DeepCritical
+        ## AI-Powered Drug Repurposing Research Agent
+
+        Ask questions about potential drug repurposing opportunities.
+        The agent searches PubMed, ClinicalTrials.gov, and bioRxiv/medRxiv preprints.
+
+        **Example questions:**
+        - "What drugs could be repurposed for Alzheimer's disease?"
+        - "Is metformin effective for cancer treatment?"
+        - "What existing medications show promise for Long COVID?"
+        """)
+
+        # 2. Main chat interface
         gr.ChatInterface(
             fn=research_agent,
-            title="🧬 DeepCritical",
-            description=(
-                "**AI-Powered Drug Repurposing Research Agent**\n\n"
-                "Ask questions about potential drug repurposing opportunities. "
-                "The agent searches PubMed, ClinicalTrials.gov, and bioRxiv/medRxiv preprints."
-            ),
             examples=[
                 [
                     "What drugs could be repurposed for Alzheimer's disease?",
@@ -320,12 +328,21 @@ def create_demo() -> Any:
 
 def main() -> None:
     """Run the Gradio app with MCP server enabled."""
+    # CSS to fix the header cutoff issue in HuggingFace Spaces
+    # Adds padding to the top of the container to clear the HF banner
+    css = """
+    .gradio-container {
+        padding-top: 50px !important;
+    }
+    """
+
     demo = create_demo()
     demo.launch(
         server_name="0.0.0.0",
         server_port=7860,
         share=False,
         mcp_server=True,
+        css=css,
     )
 
 
