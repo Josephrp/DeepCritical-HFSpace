@@ -35,7 +35,7 @@ uv run pytest -m integration
 
 **Pattern**: Search-and-judge loop with multi-tool orchestration.
 
-```
+```text
 User Question → Orchestrator
     ↓
 Search Loop:
@@ -49,6 +49,7 @@ Research Report with Citations
 ```
 
 **Key Components**:
+
 - `src/orchestrator.py` - Main agent loop
 - `src/tools/pubmed.py` - PubMed E-utilities search
 - `src/tools/clinicaltrials.py` - ClinicalTrials.gov API
@@ -70,6 +71,7 @@ Research Report with Citations
 ## Configuration
 
 Settings via pydantic-settings from `.env`:
+
 - `LLM_PROVIDER`: "openai" or "anthropic"
 - `OPENAI_API_KEY` / `ANTHROPIC_API_KEY`: LLM keys
 - `NCBI_API_KEY`: Optional, for higher PubMed rate limits
@@ -79,7 +81,7 @@ Settings via pydantic-settings from `.env`:
 
 ## Exception Hierarchy
 
-```
+```text
 DeepCriticalError (base)
 ├── SearchError
 │   └── RateLimitError
@@ -109,6 +111,7 @@ DeepCriticalError (base)
 - Remote `huggingface-upstream`: HuggingFace Spaces (deployment target)
 
 **HuggingFace Spaces Collaboration:**
+
 - Each contributor should use their own dev branch: `yourname-dev` (e.g., `vcms-dev`, `mario-dev`)
 - **DO NOT push directly to `main` or `dev` on HuggingFace** - these can be overwritten easily
 - GitHub is the source of truth; HuggingFace is for deployment/demo

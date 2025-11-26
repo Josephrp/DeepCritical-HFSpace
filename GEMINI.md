@@ -1,6 +1,7 @@
 # DeepCritical Context
 
 ## Project Overview
+
 **DeepCritical** is an AI-native Medical Drug Repurposing Research Agent.
 **Goal:** To accelerate the discovery of new uses for existing drugs by intelligently searching biomedical literature (PubMed, ClinicalTrials.gov, bioRxiv), evaluating evidence, and hypothesizing potential applications.
 
@@ -8,12 +9,14 @@
 The project follows a **Vertical Slice Architecture** (Search -> Judge -> Orchestrator) and adheres to **Strict TDD** (Test-Driven Development).
 
 **Current Status:**
+
 - **Phases 1-9:** COMPLETE. Foundation, Search, Judge, UI, Orchestrator, Embeddings, Hypothesis, Report, Cleanup.
 - **Phases 10-11:** COMPLETE. ClinicalTrials.gov and bioRxiv integration.
 - **Phase 12:** COMPLETE. MCP Server integration (Gradio MCP at `/gradio_api/mcp/`).
 - **Phase 13:** COMPLETE. Modal sandbox for statistical analysis.
 
 ## Tech Stack & Tooling
+
 - **Language:** Python 3.11 (Pinned)
 - **Package Manager:** `uv` (Rust-based, extremely fast)
 - **Frameworks:** `pydantic`, `pydantic-ai`, `httpx`, `gradio[mcp]`
@@ -35,6 +38,7 @@ The project follows a **Vertical Slice Architecture** (Search -> Judge -> Orches
 | `make clean` | Clean up cache and artifacts. |
 
 ## Directory Structure
+
 - `src/`: Source code
   - `utils/`: Shared utilities (`config.py`, `exceptions.py`, `models.py`)
   - `tools/`: Search tools (`pubmed.py`, `clinicaltrials.py`, `biorxiv.py`, `code_execution.py`)
@@ -50,6 +54,7 @@ The project follows a **Vertical Slice Architecture** (Search -> Judge -> Orches
 - `examples/`: Working demos for each phase
 
 ## Key Components
+
 - `src/orchestrator.py` - Main agent loop
 - `src/tools/pubmed.py` - PubMed E-utilities search
 - `src/tools/clinicaltrials.py` - ClinicalTrials.gov API
@@ -62,6 +67,7 @@ The project follows a **Vertical Slice Architecture** (Search -> Judge -> Orches
 ## Configuration
 
 Settings via pydantic-settings from `.env`:
+
 - `LLM_PROVIDER`: "openai" or "anthropic"
 - `OPENAI_API_KEY` / `ANTHROPIC_API_KEY`: LLM keys
 - `NCBI_API_KEY`: Optional, for higher PubMed rate limits
@@ -70,6 +76,7 @@ Settings via pydantic-settings from `.env`:
 - `LOG_LEVEL`: DEBUG, INFO, WARNING, ERROR
 
 ## Development Conventions
+
 1. **Strict TDD:** Write failing tests in `tests/unit/` *before* implementing logic in `src/`.
 2. **Type Safety:** All code must pass `mypy --strict`. Use Pydantic models for data exchange.
 3. **Linting:** Zero tolerance for Ruff errors.
@@ -84,6 +91,7 @@ Settings via pydantic-settings from `.env`:
 - Remote `huggingface-upstream`: HuggingFace Spaces (deployment target)
 
 **HuggingFace Spaces Collaboration:**
+
 - Each contributor should use their own dev branch: `yourname-dev` (e.g., `vcms-dev`, `mario-dev`)
 - **DO NOT push directly to `main` or `dev` on HuggingFace** - these can be overwritten easily
 - GitHub is the source of truth; HuggingFace is for deployment/demo
