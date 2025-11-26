@@ -5,6 +5,10 @@ from collections.abc import AsyncGenerator
 from typing import Any
 
 import gradio as gr
+from pydantic_ai.models.anthropic import AnthropicModel
+from pydantic_ai.models.openai import OpenAIModel
+from pydantic_ai.providers.anthropic import AnthropicProvider
+from pydantic_ai.providers.openai import OpenAIProvider
 
 from src.agent_factory.judges import JudgeHandler, MockJudgeHandler
 from src.mcp_tools import (
@@ -19,16 +23,24 @@ from src.tools.biorxiv import BioRxivTool
 from src.tools.clinicaltrials import ClinicalTrialsTool
 from src.tools.pubmed import PubMedTool
 from src.tools.search_handler import SearchHandler
+from src.utils.config import settings
 from src.utils.models import OrchestratorConfig
 
 
-def configure_orchestrator(use_mock: bool = False, mode: str = "simple") -> Any:
+def configure_orchestrator(
+    use_mock: bool = False,
+    mode: str = "simple",
+    user_api_key: str | None = None,
+    api_provider: str = "openai",
+) -> Any:
     """
     Create an orchestrator instance.
 
     Args:
         use_mock: If True, use MockJudgeHandler (no API key needed)
         mode: Orchestrator mode ("simple" or "magentic")
+        user_api_key: Optional user-provided API key (BYOK)
+        api_provider: API provider ("openai" or "anthropic")
 
     Returns:
         Configured Orchestrator instance
@@ -50,7 +62,16 @@ def configure_orchestrator(use_mock: bool = False, mode: str = "simple") -> Any:
     if use_mock:
         judge_handler = MockJudgeHandler()
     else:
-        judge_handler = JudgeHandler()
+        # Create model with user's API key if provided
+        model: AnthropicModel | OpenAIModel | None = None
+        if user_api_key:
+            if api_provider == "anthropic":
+                anthropic_provider = AnthropicProvider(api_key=user_api_key)
+                model = AnthropicModel(settings.anthropic_model, provider=anthropic_provider)
+            else:
+                openai_provider = OpenAIProvider(api_key=user_api_key)
+                model = OpenAIModel(settings.openai_model, provider=openai_provider)
+        judge_handler = JudgeHandler(model=model)
 
     return create_orchestrator(
         search_handler=search_handler,
@@ -64,6 +85,8 @@ async def research_agent(
     message: str,
     history: list[dict[str, Any]],
     mode: str = "simple",
+    api_key: str = "",
+    api_provider: str = "openai",
 ) -> AsyncGenerator[str, None]:
     """
     Gradio chat function that runs the research agent.
@@ -72,6 +95,8 @@ async def research_agent(
         message: User's research question
         history: Chat history (Gradio format)
         mode: Orchestrator mode ("simple" or "magentic")
+        api_key: Optional user-provided API key (BYOK - Bring Your Own Key)
+        api_provider: API provider ("openai" or "anthropic")
 
     Yields:
         Markdown-formatted responses for streaming
@@ -80,30 +105,57 @@ async def research_agent(
         yield "Please enter a research question."
         return
 
+    # Clean user-provided API key
+    user_api_key = api_key.strip() if api_key else None
+
     # Decide whether to use real LLMs or mock based on mode and available keys
     has_openai = bool(os.getenv("OPENAI_API_KEY"))
     has_anthropic = bool(os.getenv("ANTHROPIC_API_KEY"))
+    has_user_key = bool(user_api_key)
 
     if mode == "magentic":
         # Magentic currently supports OpenAI only
-        use_mock = not has_openai
+        use_mock = not (has_openai or (has_user_key and api_provider == "openai"))
     else:
         # Simple mode can work with either provider
-        use_mock = not (has_openai or has_anthropic)
+        use_mock = not (has_openai or has_anthropic or has_user_key)
 
     # If magentic mode requested but no OpenAI key, fallback/warn
     if mode == "magentic" and use_mock:
         yield (
             "⚠️ **Warning**: Magentic mode requires OpenAI API key. "
-            "Falling back to Mock Simple mode."
+            "Falling back to demo mode.\n\n"
         )
         mode = "simple"
+
+    # Inform user about their key being used
+    if has_user_key and not use_mock:
+        yield (
+            f"🔑 **Using your {api_provider.upper()} API key** - "
+            "Your key is used only for this session and is never stored.\n\n"
+        )
+
+    # Warn users when running in demo mode (no LLM keys)
+    if use_mock:
+        yield (
+            "🔬 **Demo Mode**: Running with real biomedical searches but without "
+            "LLM-powered analysis.\n\n"
+            "**To unlock full AI analysis:**\n"
+            "- Enter your OpenAI or Anthropic API key below, OR\n"
+            "- Configure secrets in HuggingFace Space settings\n\n"
+            "---\n\n"
+        )
 
     # Run the agent and stream events
     response_parts: list[str] = []
 
     try:
-        orchestrator = configure_orchestrator(use_mock=use_mock, mode=mode)
+        orchestrator = configure_orchestrator(
+            use_mock=use_mock,
+            mode=mode,
+            user_api_key=user_api_key,
+            api_provider=api_provider,
+        )
         async for event in orchestrator.run(message):
             # Format event as markdown
             event_md = event.to_markdown()
@@ -148,10 +200,30 @@ def create_demo() -> Any:
             fn=research_agent,
             title="",
             examples=[
-                ["What drugs could be repurposed for Alzheimer's disease?", "simple"],
-                ["Is metformin effective for treating cancer?", "simple"],
-                ["What medications show promise for Long COVID treatment?", "simple"],
-                ["Can statins be repurposed for neurological conditions?", "simple"],
+                [
+                    "What drugs could be repurposed for Alzheimer's disease?",
+                    "simple",
+                    "",
+                    "openai",
+                ],
+                [
+                    "Is metformin effective for treating cancer?",
+                    "simple",
+                    "",
+                    "openai",
+                ],
+                [
+                    "What medications show promise for Long COVID treatment?",
+                    "simple",
+                    "",
+                    "openai",
+                ],
+                [
+                    "Can statins be repurposed for neurological conditions?",
+                    "simple",
+                    "",
+                    "openai",
+                ],
             ],
             additional_inputs=[
                 gr.Radio(
@@ -159,7 +231,19 @@ def create_demo() -> Any:
                     value="simple",
                     label="Orchestrator Mode",
                     info="Simple: Linear (OpenAI/Anthropic) | Magentic: Multi-Agent (OpenAI)",
-                )
+                ),
+                gr.Textbox(
+                    label="🔑 API Key (Optional - Bring Your Own Key)",
+                    placeholder="sk-... or sk-ant-...",
+                    type="password",
+                    info="Enter your own API key for full AI analysis. Never stored.",
+                ),
+                gr.Radio(
+                    choices=["openai", "anthropic"],
+                    value="openai",
+                    label="API Provider",
+                    info="Select the provider for your API key",
+                ),
             ],
         )
 
