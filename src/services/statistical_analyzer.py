@@ -145,7 +145,9 @@ Generate executable Python code to analyze this evidence."""
                 return AnalysisResult(
                     verdict="INCONCLUSIVE",
                     confidence=0.0,
-                    statistical_evidence=f"Execution failed: {execution['error']}",
+                    statistical_evidence=(
+                        f"Execution failed: {execution.get('error', 'Unknown error')}"
+                    ),
                     code_generated=generated_code,
                     execution_output=execution.get("stderr", ""),
                     key_findings=[],

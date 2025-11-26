@@ -38,7 +38,8 @@ class TestStatisticalAnalyzer:
         import src.services.statistical_analyzer as module
 
         # Check module doesn't import agent_framework
-        source = open(module.__file__).read()
+        with open(module.__file__) as f:
+            source = f.read()
         assert "from agent_framework" not in source
         assert "import agent_framework" not in source
         assert "BaseAgent" not in source
