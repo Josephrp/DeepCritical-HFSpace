@@ -28,7 +28,7 @@ format:
 typecheck:
 	uv run mypy src
 
-check: lint typecheck test
+check: lint typecheck test-cov
 	@echo "All checks passed!"
 
 clean:
