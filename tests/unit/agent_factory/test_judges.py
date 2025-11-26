@@ -164,8 +164,9 @@ class TestMockJudgeHandler:
 
         result = await handler.assess("test", evidence)
 
-        expected_mech_score = 7
         expected_evidence_len = 2
+        # New dynamic scoring: mechanism_score = min(10, evidence_count * 2)
+        expected_mech_score = min(10, expected_evidence_len * 2)  # = 4
 
         assert handler.call_count == 1
         assert handler.last_question == "test"
@@ -174,6 +175,8 @@ class TestMockJudgeHandler:
         assert result.details.mechanism_score == expected_mech_score
         assert result.sufficient is False
         assert result.recommendation == "continue"
+        # Verify demo mode messaging
+        assert "Demo mode" in result.reasoning
 
     @pytest.mark.asyncio
     async def test_mock_handler_custom_response(self):

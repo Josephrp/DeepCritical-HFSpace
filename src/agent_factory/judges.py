@@ -148,9 +148,10 @@ class JudgeHandler:
 
 class MockJudgeHandler:
     """
-    Mock JudgeHandler for testing without LLM calls.
+    Mock JudgeHandler for demo mode without LLM calls.
 
-    Use this in unit tests to avoid API calls.
+    Extracts meaningful information from real search results
+    to provide a useful demo experience without requiring API keys.
     """
 
     def __init__(self, mock_response: JudgeAssessment | None = None) -> None:
@@ -158,19 +159,64 @@ class MockJudgeHandler:
         Initialize with optional mock response.
 
         Args:
-            mock_response: The assessment to return. If None, uses default.
+            mock_response: The assessment to return. If None, extracts from evidence.
         """
         self.mock_response = mock_response
         self.call_count = 0
         self.last_question: str | None = None
         self.last_evidence: list[Evidence] | None = None
 
+    def _extract_key_findings(self, evidence: list[Evidence], max_findings: int = 5) -> list[str]:
+        """Extract key findings from evidence titles."""
+        findings = []
+        for e in evidence[:max_findings]:
+            # Use first 150 chars of title as a finding
+            title = e.citation.title
+            if len(title) > 150:
+                title = title[:147] + "..."
+            findings.append(title)
+        return findings if findings else ["No specific findings extracted (demo mode)"]
+
+    def _extract_drug_candidates(self, question: str, evidence: list[Evidence]) -> list[str]:
+        """Extract potential drug names from question and evidence."""
+        # Common drug-related keywords to look for
+        candidates = set()
+
+        # Extract from question (simple heuristic)
+        question_words = question.lower().split()
+        for word in question_words:
+            # Skip common words, keep potential drug names
+            if len(word) > 3 and word not in {
+                "what", "which", "could", "drugs", "drug", "medications",
+                "medicine", "treat", "treatment", "help", "best", "effective",
+                "repurposed", "repurposing", "disease", "condition", "therapy",
+            }:
+                # Capitalize as potential drug name
+                candidates.add(word.capitalize())
+
+        # Extract from evidence titles (look for capitalized terms)
+        for e in evidence[:10]:
+            words = e.citation.title.split()
+            for word in words:
+                # Look for capitalized words that might be drug names
+                cleaned = word.strip(".,;:()[]")
+                if (
+                    len(cleaned) > 3
+                    and cleaned[0].isupper()
+                    and cleaned.lower() not in {"the", "and", "for", "with", "from"}
+                ):
+                    candidates.add(cleaned)
+
+        # Return top candidates or placeholder
+        candidate_list = list(candidates)[:5]
+        return candidate_list if candidate_list else ["See evidence below for potential candidates"]
+
     async def assess(
         self,
         question: str,
         evidence: list[Evidence],
     ) -> JudgeAssessment:
-        """Return the mock response."""
+        """Return assessment based on actual evidence (demo mode)."""
         self.call_count += 1
         self.last_question = question
         self.last_evidence = evidence
@@ -179,19 +225,42 @@ class MockJudgeHandler:
             return self.mock_response
 
         min_evidence = 3
-        # Default mock response
+        evidence_count = len(evidence)
+
+        # Extract meaningful data from actual evidence
+        drug_candidates = self._extract_drug_candidates(question, evidence)
+        key_findings = self._extract_key_findings(evidence)
+
+        # Calculate scores based on evidence quantity
+        mechanism_score = min(10, evidence_count * 2) if evidence_count > 0 else 0
+        clinical_score = min(10, evidence_count) if evidence_count > 0 else 0
+
         return JudgeAssessment(
             details=AssessmentDetails(
-                mechanism_score=7,
-                mechanism_reasoning="Mock assessment - good mechanism evidence",
-                clinical_evidence_score=6,
-                clinical_reasoning="Mock assessment - moderate clinical evidence",
-                drug_candidates=["Drug A", "Drug B"],
-                key_findings=["Finding 1", "Finding 2"],
+                mechanism_score=mechanism_score,
+                mechanism_reasoning=(
+                    f"Demo mode: Found {evidence_count} sources. "
+                    "Configure LLM API key for detailed mechanism analysis."
+                ),
+                clinical_evidence_score=clinical_score,
+                clinical_reasoning=(
+                    f"Demo mode: {evidence_count} sources retrieved from PubMed, "
+                    "ClinicalTrials.gov, and bioRxiv. Full analysis requires LLM API key."
+                ),
+                drug_candidates=drug_candidates,
+                key_findings=key_findings,
             ),
-            sufficient=len(evidence) >= min_evidence,
-            confidence=0.75,
-            recommendation="synthesize" if len(evidence) >= min_evidence else "continue",
-            next_search_queries=["query 1", "query 2"] if len(evidence) < min_evidence else [],
-            reasoning="Mock assessment for testing purposes",
+            sufficient=evidence_count >= min_evidence,
+            confidence=min(0.5, evidence_count * 0.1) if evidence_count > 0 else 0.0,
+            recommendation="synthesize" if evidence_count >= min_evidence else "continue",
+            next_search_queries=(
+                [f"{question} mechanism", f"{question} clinical trials"]
+                if evidence_count < min_evidence
+                else []
+            ),
+            reasoning=(
+                f"Demo mode assessment based on {evidence_count} real search results. "
+                "For AI-powered analysis with drug candidate identification and "
+                "evidence synthesis, configure OPENAI_API_KEY or ANTHROPIC_API_KEY."
+            ),
         )
