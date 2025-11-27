@@ -3,7 +3,7 @@
 Demo: DeepCritical Agent Loop (Search + Judge + Orchestrator).
 
 This script demonstrates the REAL Phase 4 orchestration:
-- REAL Iterative Search (PubMed + ClinicalTrials + bioRxiv)
+- REAL Iterative Search (PubMed + ClinicalTrials + Europe PMC)
 - REAL Evidence Evaluation (LLM Judge)
 - REAL Orchestration Loop
 - REAL Final Synthesis
@@ -40,7 +40,7 @@ async def main() -> None:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 This demo runs the REAL search-judge-synthesize loop:
-  1. REAL search: PubMed + ClinicalTrials + bioRxiv queries
+  1. REAL search: PubMed + ClinicalTrials + Europe PMC queries
   2. REAL judge: Actual LLM assessing evidence quality
   3. REAL loop: Actual iterative refinement based on LLM decisions
   4. REAL synthesis: Actual research summary generation
@@ -105,7 +105,7 @@ Examples:
 
     print("\n" + "=" * 60)
     print("Demo complete! Everything was REAL:")
-    print("  - Real PubMed + ClinicalTrials + bioRxiv searches")
+    print("  - Real PubMed + ClinicalTrials + Europe PMC searches")
     print("  - Real LLM judge decisions")
     print("  - Real iterative refinement")
     print("=" * 60 + "\n")
