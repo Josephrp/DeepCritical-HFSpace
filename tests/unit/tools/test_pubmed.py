@@ -97,3 +97,31 @@ class TestPubMedTool:
         assert len(results) == 1
         assert results[0].citation.source == "pubmed"
         assert "Smith John" in results[0].citation.authors
+
+    @pytest.mark.asyncio
+    async def test_search_preprocesses_query(self, mocker):
+        """Test that queries are preprocessed before search."""
+        mock_search_response = MagicMock()
+        mock_search_response.json.return_value = {"esearchresult": {"idlist": []}}
+        mock_search_response.raise_for_status = MagicMock()
+
+        mock_client = AsyncMock()
+        mock_client.get = AsyncMock(return_value=mock_search_response)
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=None)
+
+        mocker.patch("httpx.AsyncClient", return_value=mock_client)
+
+        tool = PubMedTool()
+        await tool.search("What drugs help with Long COVID?")
+
+        # Verify call args
+        call_args = mock_client.get.call_args
+        params = call_args[1]["params"]
+        term = params["term"]
+
+        # "what" and "help" should be stripped
+        assert "what" not in term.lower()
+        assert "help" not in term.lower()
+        # "long covid" should be expanded
+        assert "PASC" in term or "post-COVID" in term

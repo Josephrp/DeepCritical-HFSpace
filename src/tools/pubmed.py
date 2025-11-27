@@ -7,6 +7,7 @@ import httpx
 import xmltodict
 from tenacity import retry, stop_after_attempt, wait_exponential
 
+from src.tools.query_utils import preprocess_query
 from src.utils.config import settings
 from src.utils.exceptions import RateLimitError, SearchError
 from src.utils.models import Citation, Evidence
@@ -61,11 +62,15 @@ class PubMedTool:
         """
         await self._rate_limit()
 
+        # Preprocess query to remove noise and expand synonyms
+        clean_query = preprocess_query(query)
+        final_query = clean_query if clean_query else query
+
         async with httpx.AsyncClient(timeout=30.0) as client:
             # Step 1: Search for PMIDs
             search_params = self._build_params(
                 db="pubmed",
-                term=query,
+                term=final_query,
                 retmax=max_results,
                 sort="relevance",
             )
