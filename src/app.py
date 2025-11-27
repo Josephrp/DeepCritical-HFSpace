@@ -74,6 +74,14 @@ def configure_orchestrator(
     ):
         model: AnthropicModel | OpenAIModel | None = None
         if user_api_key:
+            # Validate key/provider match to prevent silent auth failures
+            if api_provider == "openai" and user_api_key.startswith("sk-ant-"):
+                raise ValueError("Anthropic key provided but OpenAI provider selected")
+            is_openai_key = user_api_key.startswith("sk-") and not user_api_key.startswith(
+                "sk-ant-"
+            )
+            if api_provider == "anthropic" and is_openai_key:
+                raise ValueError("OpenAI key provided but Anthropic provider selected")
             if api_provider == "anthropic":
                 anthropic_provider = AnthropicProvider(api_key=user_api_key)
                 model = AnthropicModel(settings.anthropic_model, provider=anthropic_provider)

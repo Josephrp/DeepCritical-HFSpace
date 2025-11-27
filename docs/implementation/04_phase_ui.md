@@ -573,19 +573,43 @@ def create_demo() -> gr.Blocks:
         - "What existing medications show promise for Long COVID?"
         """)
 
-        chatbot = gr.ChatInterface(
+        # Note: additional_inputs render in an accordion below the chat input
+        gr.ChatInterface(
             fn=research_agent,
-            type="messages",
-            title="",
             examples=[
-                "What drugs could be repurposed for Alzheimer's disease?",
-                "Is metformin effective for treating cancer?",
-                "What medications show promise for Long COVID treatment?",
-                "Can statins be repurposed for neurological conditions?",
+                [
+                    "What drugs could be repurposed for Alzheimer's disease?",
+                    "simple",
+                    "",
+                    "openai",
+                ],
+                [
+                    "Is metformin effective for treating cancer?",
+                    "simple",
+                    "",
+                    "openai",
+                ],
             ],
-            retry_btn="🔄 Retry",
-            undo_btn="↩️ Undo",
-            clear_btn="🗑️ Clear",
+            additional_inputs=[
+                gr.Radio(
+                    choices=["simple", "magentic"],
+                    value="simple",
+                    label="Orchestrator Mode",
+                    info="Simple: Linear | Magentic: Multi-Agent (OpenAI)",
+                ),
+                gr.Textbox(
+                    label="API Key (Optional - Bring Your Own Key)",
+                    placeholder="sk-... or sk-ant-...",
+                    type="password",
+                    info="Enter your own API key for full AI analysis. Never stored.",
+                ),
+                gr.Radio(
+                    choices=["openai", "anthropic"],
+                    value="openai",
+                    label="API Provider",
+                    info="Select the provider for your API key",
+                ),
+            ],
         )
 
         gr.Markdown("""

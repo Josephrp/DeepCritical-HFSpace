@@ -8,6 +8,7 @@ from src.agent_factory.judges import HFInferenceJudgeHandler
 from src.utils.models import Citation, Evidence
 
 
+@pytest.mark.unit
 class TestHFInferenceJudgeHandler:
     """Tests for HFInferenceJudgeHandler."""
 
@@ -102,9 +103,9 @@ class TestHFInferenceJudgeHandler:
 
                 # Should have tried all 3 fallback models
                 assert mock_call.call_count == 3
-                assert result.sufficient is False  # Fallback assessment
-                error_msg = "All HF models failed"
-                assert error_msg in str(mock_call.side_effect) or "failed" in result.reasoning
+                # Fallback assessment should indicate failure
+                assert result.sufficient is False
+                assert "failed" in result.reasoning.lower() or "error" in result.reasoning.lower()
 
     def test_extract_json_robustness(self, handler):
         """Test JSON extraction with various inputs."""

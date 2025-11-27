@@ -82,7 +82,7 @@ class MagenticOrchestrator:
 
         # Manager chat client (orchestrates the agents)
         manager_client = OpenAIChatClient(
-            model_id="gpt-4o",  # Good model for planning/coordination
+            model_id=settings.openai_model,  # Use configured model
             api_key=settings.openai_api_key,
         )
 

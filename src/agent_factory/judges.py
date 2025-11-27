@@ -195,14 +195,14 @@ class HFInferenceJudgeHandler:
         else:
             user_prompt = format_empty_evidence_prompt(question)
 
-        models_to_try = [self.model_id] if self.model_id else self.FALLBACK_MODELS
-        last_error = None
+        models_to_try: list[str] = [self.model_id] if self.model_id else self.FALLBACK_MODELS
+        last_error: Exception | None = None
 
         for model in models_to_try:
             try:
                 return await self._call_with_retry(model, user_prompt, question)
             except Exception as e:
-                logger.warning(f"Model {model} failed", error=str(e))
+                logger.warning("Model failed", model=model, error=str(e))
                 last_error = e
                 continue
 
@@ -275,11 +275,17 @@ IMPORTANT: Respond with ONLY valid JSON matching this schema:
         """
         text = text.strip()
 
-        # Remove markdown code blocks if present
+        # Remove markdown code blocks if present (with bounds checking)
         if "```json" in text:
-            text = text.split("```json")[1].split("```")[0]
+            parts = text.split("```json", 1)
+            if len(parts) > 1:
+                inner_parts = parts[1].split("```", 1)
+                text = inner_parts[0]
         elif "```" in text:
-            text = text.split("```")[1].split("```")[0]
+            parts = text.split("```", 1)
+            if len(parts) > 1:
+                inner_parts = parts[1].split("```", 1)
+                text = inner_parts[0]
 
         text = text.strip()
 
@@ -339,6 +345,7 @@ IMPORTANT: Respond with ONLY valid JSON matching this schema:
             next_search_queries=[
                 f"{question} mechanism",
                 f"{question} clinical trials",
+                f"{question} drug candidates",
             ],
             reasoning=f"HF Inference failed: {error}. Recommend configuring OpenAI/Anthropic key.",
         )

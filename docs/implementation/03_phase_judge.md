@@ -374,272 +374,167 @@ class HFInferenceJudgeHandler:
         "HuggingFaceH4/zephyr-7b-beta",          # Ungated fallback
     ]
 
-    def __init__(self, model_id: str | None = None):
+    def __init__(self, model_id: str | None = None) -> None:
         """
         Initialize with HF Inference client.
 
         Args:
-            model_id: HuggingFace model ID. If None, uses fallback chain.
-                     Will automatically use HF_TOKEN from env if available.
+            model_id: Optional specific model ID. If None, uses FALLBACK_MODELS chain.
         """
-        from huggingface_hub import InferenceClient
-        import os
-
-        self.model_id = model_id or self.FALLBACK_MODELS[0]
-        self._fallback_models = self.FALLBACK_MODELS.copy()
-
-        # InferenceClient auto-reads HF_TOKEN from env
-        self.client = InferenceClient(model=self.model_id)
-        self._has_token = bool(os.getenv("HF_TOKEN"))
-
+        self.model_id = model_id
+        # Will automatically use HF_TOKEN from env if available
+        self.client = InferenceClient()
         self.call_count = 0
-        self.last_question = None
-        self.last_evidence = None
+        self.last_question: str | None = None
+        self.last_evidence: list[Evidence] | None = None
 
-        logger.info(
-            "HFInferenceJudgeHandler initialized",
-            model=self.model_id,
-            has_token=self._has_token,
-        )
-
-    def _extract_json(self, response: str) -> dict | None:
+    def _extract_json(self, text: str) -> dict[str, Any] | None:
         """
-        Robustly extract JSON from LLM response.
-
-        Handles:
-        - Raw JSON: {"key": "value"}
-        - Markdown code blocks: ```json\n{"key": "value"}\n```
-        - Preamble text: "Here is the JSON:\n{"key": "value"}"
-        - Nested braces: {"outer": {"inner": "value"}}
-
-        Returns:
-            Parsed dict or None if extraction fails
+        Robust JSON extraction that handles markdown blocks and nested braces.
         """
-        import json
-        import re
+        text = text.strip()
 
-        # Strategy 1: Try markdown code block first
-        code_block_match = re.search(r"```(?:json)?\s*(\{[\s\S]*?\})\s*```", response)
-        if code_block_match:
-            try:
-                return json.loads(code_block_match.group(1))
-            except json.JSONDecodeError:
-                pass
+        # Remove markdown code blocks if present (with bounds checking)
+        if "```json" in text:
+            parts = text.split("```json", 1)
+            if len(parts) > 1:
+                inner_parts = parts[1].split("```", 1)
+                text = inner_parts[0]
+        elif "```" in text:
+            parts = text.split("```", 1)
+            if len(parts) > 1:
+                inner_parts = parts[1].split("```", 1)
+                text = inner_parts[0]
 
-        # Strategy 2: Find outermost JSON object with brace matching
-        # This handles nested objects correctly
-        start = response.find("{")
-        if start == -1:
+        text = text.strip()
+
+        # Find first '{'
+        start_idx = text.find("{")
+        if start_idx == -1:
             return None
 
-        depth = 0
-        end = start
+        # Stack-based parsing ignoring chars in strings
+        count = 0
         in_string = False
-        escape_next = False
+        escape = False
 
-        for i, char in enumerate(response[start:], start):
-            if escape_next:
-                escape_next = False
-                continue
-
-            if char == "\\":
-                escape_next = True
-                continue
-
-            if char == '"' and not escape_next:
-                in_string = not in_string
-                continue
-
+        for i, char in enumerate(text[start_idx:], start=start_idx):
             if in_string:
-                continue
-
-            if char == "{":
-                depth += 1
+                if escape:
+                    escape = False
+                elif char == "\\":
+                    escape = True
+                elif char == '"':
+                    in_string = False
+            elif char == '"':
+                in_string = True
+            elif char == "{":
+                count += 1
             elif char == "}":
-                depth -= 1
-                if depth == 0:
-                    end = i + 1
-                    break
-
-        if depth == 0 and end > start:
-            try:
-                return json.loads(response[start:end])
-            except json.JSONDecodeError:
-                pass
+                count -= 1
+                if count == 0:
+                    try:
+                        result = json.loads(text[start_idx : i + 1])
+                        if isinstance(result, dict):
+                            return result
+                        return None
+                    except json.JSONDecodeError:
+                        return None
 
         return None
 
-    async def _call_with_retry(
-        self,
-        messages: list[dict],
-        max_retries: int = 3,
-    ) -> str:
-        """
-        Call HF Inference with exponential backoff retry.
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=1, max=4),
+        retry=retry_if_exception_type(Exception),
+        reraise=True,
+    )
+    async def _call_with_retry(self, model: str, prompt: str, question: str) -> JudgeAssessment:
+        """Make API call with retry logic using chat_completion."""
+        loop = asyncio.get_running_loop()
 
-        Args:
-            messages: Chat messages in OpenAI format
-            max_retries: Max retry attempts
+        # Build messages for chat_completion (model-agnostic)
+        messages = [
+            {
+                "role": "system",
+                "content": f"""{SYSTEM_PROMPT}
 
-        Returns:
-            Response text
-
-        Raises:
-            Exception if all retries fail
-        """
-        import asyncio
-        import time
-
-        last_error = None
-
-        for attempt in range(max_retries):
-            try:
-                loop = asyncio.get_event_loop()
-                response = await loop.run_in_executor(
-                    None,
-                    lambda: self.client.chat_completion(
-                        messages=messages,
-                        max_tokens=1024,
-                        temperature=0.1,
-                    )
-                )
-                return response.choices[0].message.content
-
-            except Exception as e:
-                last_error = e
-                error_str = str(e).lower()
-
-                # Check if rate limited or service unavailable
-                is_rate_limit = "429" in error_str or "rate" in error_str
-                is_unavailable = "503" in error_str or "unavailable" in error_str
-                is_auth_error = "401" in error_str or "403" in error_str
-
-                if is_auth_error:
-                    # Gated model without token - try fallback immediately
-                    logger.warning("Auth error, trying fallback model", error=str(e))
-                    if self._try_fallback_model():
-                        continue
-                    raise
-
-                if is_rate_limit or is_unavailable:
-                    # Exponential backoff: 1s, 2s, 4s
-                    wait_time = 2 ** attempt
-                    logger.warning(
-                        "Rate limited, retrying",
-                        attempt=attempt + 1,
-                        wait=wait_time,
-                        error=str(e),
-                    )
-                    await asyncio.sleep(wait_time)
-                    continue
-
-                # Other errors - raise immediately
-                raise
-
-        # All retries failed - try fallback model
-        if self._try_fallback_model():
-            return await self._call_with_retry(messages, max_retries=1)
-
-        raise last_error or Exception("All retries failed")
-
-    def _try_fallback_model(self) -> bool:
-        """
-        Try to switch to a fallback model.
-
-        Returns:
-            True if successfully switched, False if no fallbacks left
-        """
-        from huggingface_hub import InferenceClient
-
-        # Remove current model from fallbacks
-        if self.model_id in self._fallback_models:
-            self._fallback_models.remove(self.model_id)
-
-        if not self._fallback_models:
-            return False
-
-        # Switch to next model
-        self.model_id = self._fallback_models[0]
-        self.client = InferenceClient(model=self.model_id)
-        logger.info("Switched to fallback model", model=self.model_id)
-        return True
-
-    async def assess(
-        self,
-        question: str,
-        evidence: List[Evidence],
-    ) -> JudgeAssessment:
-        """
-        Assess evidence using HuggingFace Inference API.
-
-        Uses chat_completion API for model-agnostic prompts.
-        Includes retry logic and fallback model chain.
-
-        Args:
-            question: The user's research question
-            evidence: List of Evidence objects from search
-
-        Returns:
-            JudgeAssessment with evaluation results
-        """
-        self.call_count += 1
-        self.last_question = question
-        self.last_evidence = evidence
-
-        # Format the prompt
-        if evidence:
-            user_prompt = format_user_prompt(question, evidence)
-        else:
-            user_prompt = format_empty_evidence_prompt(question)
-
-        # Build messages in OpenAI-compatible format (works with chat_completion)
-        json_schema = """{
-    "details": {
+IMPORTANT: Respond with ONLY valid JSON matching this schema:
+{{
+    "details": {{
         "mechanism_score": <int 0-10>,
         "mechanism_reasoning": "<string>",
         "clinical_evidence_score": <int 0-10>,
         "clinical_reasoning": "<string>",
         "drug_candidates": ["<string>", ...],
         "key_findings": ["<string>", ...]
-    },
+    }},
     "sufficient": <bool>,
     "confidence": <float 0-1>,
     "recommendation": "continue" | "synthesize",
     "next_search_queries": ["<string>", ...],
     "reasoning": "<string>"
-}"""
-
-        messages = [
-            {
-                "role": "system",
-                "content": f"{SYSTEM_PROMPT}\n\nIMPORTANT: Respond with ONLY valid JSON matching this schema:\n{json_schema}",
+}}""",
             },
-            {
-                "role": "user",
-                "content": user_prompt,
-            },
+            {"role": "user", "content": prompt},
         ]
 
-        try:
-            # Call with retry and fallback
-            response = await self._call_with_retry(messages)
+        # Use chat_completion (conversational task - supported by all models)
+        response = await loop.run_in_executor(
+            None,
+            lambda: self.client.chat_completion(
+                messages=messages,
+                model=model,
+                max_tokens=1024,
+                temperature=0.1,
+            ),
+        )
 
-            # Robust JSON extraction
-            data = self._extract_json(response)
-            if data:
-                return JudgeAssessment(**data)
+        # Extract content from response
+        content = response.choices[0].message.content
+        if not content:
+            raise ValueError("Empty response from model")
 
-            # If no valid JSON, return fallback
-            logger.warning(
-                "HF Inference returned invalid JSON",
-                response=response[:200],
-                model=self.model_id,
-            )
-            return self._create_fallback_assessment(question, "Invalid JSON response")
+        # Extract and parse JSON
+        json_data = self._extract_json(content)
+        if not json_data:
+            raise ValueError("No valid JSON found in response")
 
-        except Exception as e:
-            logger.error("HF Inference failed", error=str(e), model=self.model_id)
-            return self._create_fallback_assessment(question, str(e))
+        return JudgeAssessment(**json_data)
+
+    async def assess(
+        self,
+        question: str,
+        evidence: list[Evidence],
+    ) -> JudgeAssessment:
+        """
+        Assess evidence using HuggingFace Inference API.
+        Attempts models in order until one succeeds.
+        """
+        self.call_count += 1
+        self.last_question = question
+        self.last_evidence = evidence
+
+        # Format the user prompt
+        if evidence:
+            user_prompt = format_user_prompt(question, evidence)
+        else:
+            user_prompt = format_empty_evidence_prompt(question)
+
+        models_to_try: list[str] = [self.model_id] if self.model_id else self.FALLBACK_MODELS
+        last_error: Exception | None = None
+
+        for model in models_to_try:
+            try:
+                return await self._call_with_retry(model, user_prompt, question)
+            except Exception as e:
+                logger.warning("Model failed", model=model, error=str(e))
+                last_error = e
+                continue
+
+        # All models failed
+        logger.error("All HF models failed", error=str(last_error))
+        return self._create_fallback_assessment(question, str(last_error))
 
     def _create_fallback_assessment(
         self,
