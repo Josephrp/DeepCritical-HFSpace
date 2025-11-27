@@ -12,8 +12,8 @@ from pydantic_ai.providers.openai import OpenAIProvider
 
 from src.agent_factory.judges import HFInferenceJudgeHandler, JudgeHandler, MockJudgeHandler
 from src.orchestrator_factory import create_orchestrator
-from src.tools.biorxiv import BioRxivTool
 from src.tools.clinicaltrials import ClinicalTrialsTool
+from src.tools.europepmc import EuropePMCTool
 from src.tools.pubmed import PubMedTool
 from src.tools.search_handler import SearchHandler
 from src.utils.config import settings
@@ -46,7 +46,7 @@ def configure_orchestrator(
 
     # Create search tools
     search_handler = SearchHandler(
-        tools=[PubMedTool(), ClinicalTrialsTool(), BioRxivTool()],
+        tools=[PubMedTool(), ClinicalTrialsTool(), EuropePMCTool()],
         timeout=config.search_timeout,
     )
 

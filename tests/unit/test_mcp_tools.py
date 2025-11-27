@@ -6,8 +6,8 @@ import pytest
 
 from src.mcp_tools import (
     search_all_sources,
-    search_biorxiv,
     search_clinical_trials,
+    search_europepmc,
     search_pubmed,
 )
 from src.utils.models import Citation, Evidence
@@ -87,21 +87,21 @@ class TestSearchClinicalTrials:
             assert "Clinical Trials" in result
 
 
-class TestSearchBiorxiv:
-    """Tests for search_biorxiv MCP tool."""
+class TestSearchEuropePMC:
+    """Tests for search_europepmc MCP tool."""
 
     @pytest.mark.asyncio
     async def test_returns_formatted_string(self, mock_evidence: Evidence) -> None:
         """Should return formatted markdown string."""
-        mock_evidence.citation.source = "biorxiv"  # type: ignore
+        mock_evidence.citation.source = "europepmc"  # type: ignore
 
-        with patch("src.mcp_tools._biorxiv") as mock_tool:
+        with patch("src.mcp_tools._europepmc") as mock_tool:
             mock_tool.search = AsyncMock(return_value=[mock_evidence])
 
-            result = await search_biorxiv("preprint search", 10)
+            result = await search_europepmc("preprint search", 10)
 
             assert isinstance(result, str)
-            assert "Preprint Results" in result
+            assert "Europe PMC Results" in result
 
 
 class TestSearchAllSources:
@@ -113,18 +113,18 @@ class TestSearchAllSources:
         with (
             patch("src.mcp_tools.search_pubmed", new_callable=AsyncMock) as mock_pubmed,
             patch("src.mcp_tools.search_clinical_trials", new_callable=AsyncMock) as mock_trials,
-            patch("src.mcp_tools.search_biorxiv", new_callable=AsyncMock) as mock_biorxiv,
+            patch("src.mcp_tools.search_europepmc", new_callable=AsyncMock) as mock_europepmc,
         ):
             mock_pubmed.return_value = "## PubMed Results"
             mock_trials.return_value = "## Clinical Trials"
-            mock_biorxiv.return_value = "## Preprints"
+            mock_europepmc.return_value = "## Europe PMC Results"
 
             result = await search_all_sources("metformin", 5)
 
             assert "Comprehensive Search" in result
             assert "PubMed" in result
             assert "Clinical Trials" in result
-            assert "Preprints" in result
+            assert "Europe PMC" in result
 
     @pytest.mark.asyncio
     async def test_handles_partial_failures(self) -> None:
@@ -132,17 +132,17 @@ class TestSearchAllSources:
         with (
             patch("src.mcp_tools.search_pubmed", new_callable=AsyncMock) as mock_pubmed,
             patch("src.mcp_tools.search_clinical_trials", new_callable=AsyncMock) as mock_trials,
-            patch("src.mcp_tools.search_biorxiv", new_callable=AsyncMock) as mock_biorxiv,
+            patch("src.mcp_tools.search_europepmc", new_callable=AsyncMock) as mock_europepmc,
         ):
             mock_pubmed.return_value = "## PubMed Results"
             mock_trials.side_effect = Exception("API Error")
-            mock_biorxiv.return_value = "## Preprints"
+            mock_europepmc.return_value = "## Europe PMC Results"
 
             result = await search_all_sources("metformin", 5)
 
             # Should still contain working sources
             assert "PubMed" in result
-            assert "Preprints" in result
+            assert "Europe PMC" in result
             # Should show error for failed source
             assert "Error" in result
 
@@ -163,10 +163,10 @@ class TestMCPDocstrings:
         assert search_clinical_trials.__doc__ is not None
         assert "Args:" in search_clinical_trials.__doc__
 
-    def test_search_biorxiv_has_args_section(self) -> None:
+    def test_search_europepmc_has_args_section(self) -> None:
         """Docstring must have Args section for MCP schema generation."""
-        assert search_biorxiv.__doc__ is not None
-        assert "Args:" in search_biorxiv.__doc__
+        assert search_europepmc.__doc__ is not None
+        assert "Args:" in search_europepmc.__doc__
 
     def test_search_all_sources_has_args_section(self) -> None:
         """Docstring must have Args section for MCP schema generation."""

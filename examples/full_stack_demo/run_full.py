@@ -114,8 +114,8 @@ async def run_full_demo(query: str, max_iterations: int) -> None:
     from src.agents.hypothesis_agent import HypothesisAgent
     from src.agents.report_agent import ReportAgent
     from src.services.embeddings import EmbeddingService
-    from src.tools.biorxiv import BioRxivTool
     from src.tools.clinicaltrials import ClinicalTrialsTool
+    from src.tools.europepmc import EuropePMCTool
     from src.tools.pubmed import PubMedTool
     from src.tools.search_handler import SearchHandler
 
@@ -123,7 +123,7 @@ async def run_full_demo(query: str, max_iterations: int) -> None:
     print("[Init] Loading embedding model...")
     embedding_service = EmbeddingService()
     search_handler = SearchHandler(
-        tools=[PubMedTool(), ClinicalTrialsTool(), BioRxivTool()], timeout=30.0
+        tools=[PubMedTool(), ClinicalTrialsTool(), EuropePMCTool()], timeout=30.0
     )
     judge_handler = JudgeHandler()
 
@@ -135,7 +135,7 @@ async def run_full_demo(query: str, max_iterations: int) -> None:
         print_step(iteration, f"ITERATION {iteration}/{max_iterations}")
 
         # Step 1: REAL Search
-        print("\n[Search] Querying PubMed + ClinicalTrials + bioRxiv (REAL API calls)...")
+        print("\n[Search] Querying PubMed + ClinicalTrials + Europe PMC (REAL API calls)...")
         all_evidence = await _run_search_iteration(
             query, iteration, evidence_store, all_evidence, search_handler, embedding_service
         )

@@ -7,14 +7,14 @@ Each function follows the MCP tool contract:
 - Formatted string returns
 """
 
-from src.tools.biorxiv import BioRxivTool
 from src.tools.clinicaltrials import ClinicalTrialsTool
+from src.tools.europepmc import EuropePMCTool
 from src.tools.pubmed import PubMedTool
 
 # Singleton instances (avoid recreating on each call)
 _pubmed = PubMedTool()
 _trials = ClinicalTrialsTool()
-_biorxiv = BioRxivTool()
+_europepmc = EuropePMCTool()
 
 
 async def search_pubmed(query: str, max_results: int = 10) -> str:
@@ -78,27 +78,27 @@ async def search_clinical_trials(query: str, max_results: int = 10) -> str:
     return "\n".join(formatted)
 
 
-async def search_biorxiv(query: str, max_results: int = 10) -> str:
-    """Search bioRxiv/medRxiv for preprint research.
+async def search_europepmc(query: str, max_results: int = 10) -> str:
+    """Search Europe PMC for preprints and papers.
 
-    Searches bioRxiv and medRxiv preprint servers for cutting-edge research.
-    Note: Preprints are NOT peer-reviewed but contain the latest findings.
+    Searches Europe PMC, which includes bioRxiv, medRxiv, and peer-reviewed content.
+    Useful for finding cutting-edge preprints and open access papers.
 
     Args:
         query: Search query (e.g., "metformin neuroprotection", "long covid treatment")
         max_results: Maximum results to return (1-50, default 10)
 
     Returns:
-        Formatted preprint results with titles, authors, and abstracts
+        Formatted results with titles, authors, and abstracts
     """
     max_results = max(1, min(50, max_results))
 
-    results = await _biorxiv.search(query, max_results)
+    results = await _europepmc.search(query, max_results)
 
     if not results:
-        return f"No bioRxiv/medRxiv preprints found for: {query}"
+        return f"No Europe PMC results found for: {query}"
 
-    formatted = [f"## Preprint Results for: {query}\n"]
+    formatted = [f"## Europe PMC Results for: {query}\n"]
     for i, evidence in enumerate(results, 1):
         formatted.append(f"### {i}. {evidence.citation.title}")
         formatted.append(f"**Authors**: {', '.join(evidence.citation.authors[:3])}")
@@ -112,7 +112,7 @@ async def search_biorxiv(query: str, max_results: int = 10) -> str:
 async def search_all_sources(query: str, max_per_source: int = 5) -> str:
     """Search all biomedical sources simultaneously.
 
-    Performs parallel search across PubMed, ClinicalTrials.gov, and bioRxiv.
+    Performs parallel search across PubMed, ClinicalTrials.gov, and Europe PMC.
     This is the most comprehensive search option for drug repurposing research.
 
     Args:
@@ -129,10 +129,10 @@ async def search_all_sources(query: str, max_per_source: int = 5) -> str:
     # Run all searches in parallel
     pubmed_task = search_pubmed(query, max_per_source)
     trials_task = search_clinical_trials(query, max_per_source)
-    biorxiv_task = search_biorxiv(query, max_per_source)
+    europepmc_task = search_europepmc(query, max_per_source)
 
-    pubmed_results, trials_results, biorxiv_results = await asyncio.gather(
-        pubmed_task, trials_task, biorxiv_task, return_exceptions=True
+    pubmed_results, trials_results, europepmc_results = await asyncio.gather(
+        pubmed_task, trials_task, europepmc_task, return_exceptions=True
     )
 
     formatted = [f"# Comprehensive Search: {query}\n"]
@@ -148,10 +148,10 @@ async def search_all_sources(query: str, max_per_source: int = 5) -> str:
     else:
         formatted.append(f"## Clinical Trials\n*Error: {trials_results}*\n")
 
-    if isinstance(biorxiv_results, str):
-        formatted.append(biorxiv_results)
+    if isinstance(europepmc_results, str):
+        formatted.append(europepmc_results)
     else:
-        formatted.append(f"## Preprints\n*Error: {biorxiv_results}*\n")
+        formatted.append(f"## Europe PMC\n*Error: {europepmc_results}*\n")
 
     return "\n---\n".join(formatted)
 

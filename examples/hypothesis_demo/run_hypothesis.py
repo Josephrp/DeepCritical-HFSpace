@@ -21,8 +21,8 @@ from typing import Any
 
 from src.agents.hypothesis_agent import HypothesisAgent
 from src.services.embeddings import EmbeddingService
-from src.tools.biorxiv import BioRxivTool
 from src.tools.clinicaltrials import ClinicalTrialsTool
+from src.tools.europepmc import EuropePMCTool
 from src.tools.pubmed import PubMedTool
 from src.tools.search_handler import SearchHandler
 
@@ -39,7 +39,7 @@ async def run_hypothesis_demo(query: str) -> None:
         # Step 1: REAL Search
         print("[Step 1] Searching PubMed + ClinicalTrials + bioRxiv...")
         search_handler = SearchHandler(
-            tools=[PubMedTool(), ClinicalTrialsTool(), BioRxivTool()], timeout=30.0
+            tools=[PubMedTool(), ClinicalTrialsTool(), EuropePMCTool()], timeout=30.0
         )
         result = await search_handler.execute(query, max_results_per_tool=5)
 

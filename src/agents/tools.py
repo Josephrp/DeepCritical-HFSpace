@@ -7,14 +7,14 @@ They also interact with the thread-safe MagenticState to persist evidence.
 from agent_framework import ai_function
 
 from src.agents.state import get_magentic_state
-from src.tools.biorxiv import BioRxivTool
 from src.tools.clinicaltrials import ClinicalTrialsTool
+from src.tools.europepmc import EuropePMCTool
 from src.tools.pubmed import PubMedTool
 
 # Singleton tool instances (stateless wrappers)
 _pubmed = PubMedTool()
 _clinicaltrials = ClinicalTrialsTool()
-_biorxiv = BioRxivTool()
+_europepmc = EuropePMCTool()
 
 
 @ai_function  # type: ignore[arg-type, misc]
@@ -116,28 +116,28 @@ async def search_clinical_trials(query: str, max_results: int = 10) -> str:
 
 @ai_function  # type: ignore[arg-type, misc]
 async def search_preprints(query: str, max_results: int = 10) -> str:
-    """Search bioRxiv/medRxiv for preprint papers.
+    """Search Europe PMC for preprints and papers.
 
-    Use this tool to find the latest research that hasn't been
-    peer-reviewed yet. Good for cutting-edge findings.
+    Use this tool to find the latest research including preprints
+    from bioRxiv, medRxiv, and peer-reviewed papers.
 
     Args:
         query: Search terms (e.g., "long covid treatment")
         max_results: Maximum results to return (default 10)
 
     Returns:
-        Formatted list of preprints with abstracts and links
+        Formatted list of papers with abstracts and links
     """
     state = get_magentic_state()
 
-    results = await _biorxiv.search(query, max_results)
+    results = await _europepmc.search(query, max_results)
     if not results:
-        return f"No preprints found for: {query}"
+        return f"No papers found for: {query}"
 
     # Update state
     new_count = state.add_evidence(results)
 
-    output = [f"Found {len(results)} preprints ({new_count} new stored):\n"]
+    output = [f"Found {len(results)} papers ({new_count} new stored):\n"]
     for i, r in enumerate(results[:max_results], 1):
         title = r.citation.title
         date = r.citation.date
@@ -146,7 +146,7 @@ async def search_preprints(query: str, max_results: int = 10) -> str:
         url = r.citation.url
 
         output.append(f"{i}. **{title}**")
-        output.append(f"   Server: {source} | Date: {date}")
+        output.append(f"   Source: {source} | Date: {date}")
         output.append(f"   {content_clean}...")
         output.append(f"   URL: {url}\n")
 

@@ -24,8 +24,8 @@ import sys
 
 from src.agent_factory.judges import JudgeHandler
 from src.orchestrator import Orchestrator
-from src.tools.biorxiv import BioRxivTool
 from src.tools.clinicaltrials import ClinicalTrialsTool
+from src.tools.europepmc import EuropePMCTool
 from src.tools.pubmed import PubMedTool
 from src.tools.search_handler import SearchHandler
 from src.utils.models import OrchestratorConfig
@@ -80,7 +80,7 @@ Examples:
 
     # Setup REAL components
     search_handler = SearchHandler(
-        tools=[PubMedTool(), ClinicalTrialsTool(), BioRxivTool()], timeout=30.0
+        tools=[PubMedTool(), ClinicalTrialsTool(), EuropePMCTool()], timeout=30.0
     )
     judge_handler = JudgeHandler()  # REAL LLM judge
 

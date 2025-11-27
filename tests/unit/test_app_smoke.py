@@ -37,14 +37,14 @@ class TestAppSmoke:
         from src.mcp_tools import (
             analyze_hypothesis,
             search_all_sources,
-            search_biorxiv,
             search_clinical_trials,
+            search_europepmc,
             search_pubmed,
         )
 
         # Just verify they're callable
         assert callable(search_pubmed)
         assert callable(search_clinical_trials)
-        assert callable(search_biorxiv)
+        assert callable(search_europepmc)
         assert callable(search_all_sources)
         assert callable(analyze_hypothesis)
