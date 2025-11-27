@@ -68,7 +68,22 @@ class TestMagenticFixes:
         assert orchestrator._max_rounds == 25
 
         # Also verify it's used in _build_workflow
-        with patch("src.orchestrator_magentic.MagenticBuilder") as mock_builder:
+        # Mock all the agent creation and OpenAI client calls
+        with (
+            patch("src.orchestrator_magentic.create_search_agent") as mock_search,
+            patch("src.orchestrator_magentic.create_judge_agent") as mock_judge,
+            patch("src.orchestrator_magentic.create_hypothesis_agent") as mock_hypo,
+            patch("src.orchestrator_magentic.create_report_agent") as mock_report,
+            patch("src.orchestrator_magentic.OpenAIChatClient") as mock_client,
+            patch("src.orchestrator_magentic.MagenticBuilder") as mock_builder,
+        ):
+            # Setup mocks
+            mock_search.return_value = MagicMock()
+            mock_judge.return_value = MagicMock()
+            mock_hypo.return_value = MagicMock()
+            mock_report.return_value = MagicMock()
+            mock_client.return_value = MagicMock()
+
             # Mock the builder chain
             mock_chain = mock_builder.return_value.participants.return_value
             mock_chain.with_standard_manager.return_value.build.return_value = MagicMock()
