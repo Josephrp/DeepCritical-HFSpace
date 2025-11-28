@@ -232,8 +232,7 @@ def create_demo() -> gr.ChatInterface:
                 value="simple",
                 label="Orchestrator Mode",
                 info=(
-                    "Simple: Linear (Free Tier Friendly) | "
-                    "Advanced: Multi-Agent (Requires OpenAI)"
+                    "Simple: Linear (Free Tier Friendly) | Advanced: Multi-Agent (Requires OpenAI)"
                 ),
             ),
             gr.Textbox(
