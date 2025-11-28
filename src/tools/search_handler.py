@@ -12,6 +12,8 @@ from src.utils.models import Evidence, SearchResult, SourceName
 
 if TYPE_CHECKING:
     from src.services.llamaindex_rag import LlamaIndexRAGService
+else:
+    LlamaIndexRAGService = object
 
 logger = structlog.get_logger()
 
@@ -38,7 +40,7 @@ class SearchHandler:
         self.tools = list(tools)  # Make a copy
         self.timeout = timeout
         self.auto_ingest_to_rag = auto_ingest_to_rag
-        self._rag_service: "LlamaIndexRAGService | None" = None
+        self._rag_service: LlamaIndexRAGService | None = None
 
         if include_rag:
             self.add_rag_tool()

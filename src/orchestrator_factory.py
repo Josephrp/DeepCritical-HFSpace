@@ -2,7 +2,11 @@
 
 from typing import Any, Literal
 
-from src.legacy_orchestrator import JudgeHandlerProtocol, Orchestrator, SearchHandlerProtocol
+from src.legacy_orchestrator import (
+    JudgeHandlerProtocol,
+    Orchestrator,
+    SearchHandlerProtocol,
+)
 from src.utils.models import OrchestratorConfig
 
 

@@ -362,7 +362,7 @@ class TestReformatReferences:
         ]
         all_references = []
 
-        updated_markdown, updated_refs = long_writer_agent._reformat_references(
+        _updated_markdown, updated_refs = long_writer_agent._reformat_references(
             section_markdown, section_references, all_references
         )
 

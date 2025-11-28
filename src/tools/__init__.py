@@ -7,9 +7,9 @@ from src.tools.search_handler import SearchHandler
 
 # Re-export
 __all__ = [
+    "RAGTool",
     "PubMedTool",
     "SearchHandler",
     "SearchTool",
-    "RAGTool",
     "create_rag_tool",
 ]

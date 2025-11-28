@@ -186,7 +186,7 @@ class TestResearchGraph:
         """Test that adding edge with invalid source raises ValueError."""
         graph = ResearchGraph(entry_node="start", exit_nodes=["end"])
         edge = SequentialEdge(from_node="nonexistent", to_node="node2")
-        with pytest.raises(ValueError, match="Source node.*not found"):
+        with pytest.raises(ValueError, match=r"Source node.*not found"):
             graph.add_edge(edge)
 
     def test_add_edge_invalid_target_raises_error(self):
@@ -195,7 +195,7 @@ class TestResearchGraph:
         node1 = GraphNode(node_id="node1", node_type="agent", description="Test")
         graph.add_node(node1)
         edge = SequentialEdge(from_node="node1", to_node="nonexistent")
-        with pytest.raises(ValueError, match="Target node.*not found"):
+        with pytest.raises(ValueError, match=r"Target node.*not found"):
             graph.add_edge(edge)
 
     def test_get_next_nodes(self):
