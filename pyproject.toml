@@ -24,6 +24,7 @@ dependencies = [
     "tenacity>=8.2", # Retry logic
     "structlog>=24.1", # Structured logging
     "requests>=2.32.5", # ClinicalTrials.gov (httpx blocked by WAF)
+    "pydantic-graph>=1.22.0",
 ]
 
 [project.optional-dependencies]
@@ -91,6 +92,7 @@ ignore = [
     "PLW0603",  # Global statement (singleton pattern for Modal)
     "PLC0415",  # Lazy imports for optional dependencies
     "E402",     # Module level import not at top (needed for pytest.importorskip)
+    "E501",     # Line too long (ignore line length violations)
     "RUF100",   # Unused noqa (version differences between local/CI)
 ]
 
@@ -105,9 +107,12 @@ ignore_missing_imports = true
 disallow_untyped_defs = true
 warn_return_any = true
 warn_unused_ignores = false
+explicit_package_bases = true
+mypy_path = "."
 exclude = [
     "^reference_repos/",
     "^examples/",
+    "^folder/",
 ]
 
 # ============== PYTEST CONFIG ==============
@@ -135,6 +140,12 @@ exclude_lines = [
     "pragma: no cover",
     "if TYPE_CHECKING:",
     "raise NotImplementedError",
+]
+
+[dependency-groups]
+dev = [
+    "structlog>=25.5.0",
+    "ty>=0.0.1a28",
 ]
 
 # Note: agent-framework-core is optional for magentic mode (multi-agent orchestration)

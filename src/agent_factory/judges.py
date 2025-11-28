@@ -351,6 +351,15 @@ IMPORTANT: Respond with ONLY valid JSON matching this schema:
         )
 
 
+def create_judge_handler() -> JudgeHandler:
+    """Create a judge handler based on configuration.
+
+    Returns:
+        Configured JudgeHandler instance
+    """
+    return JudgeHandler()
+
+
 class MockJudgeHandler:
     """
     Mock JudgeHandler for demo mode without LLM calls.

@@ -41,15 +41,65 @@ class Settings(BaseSettings):
         default="all-MiniLM-L6-v2",
         description="Local sentence-transformers model (used by EmbeddingService)",
     )
+    embedding_provider: Literal["openai", "local", "huggingface"] = Field(
+        default="local",
+        description="Embedding provider to use",
+    )
+    huggingface_embedding_model: str = Field(
+        default="sentence-transformers/all-MiniLM-L6-v2",
+        description="HuggingFace embedding model ID",
+    )
+
+    # HuggingFace Configuration
+    huggingface_api_key: str | None = Field(
+        default=None, description="HuggingFace API token (HF_TOKEN or HUGGINGFACE_API_KEY)"
+    )
+    huggingface_model: str = Field(
+        default="meta-llama/Llama-3.1-8B-Instruct",
+        description="Default HuggingFace model ID for inference",
+    )
 
     # PubMed Configuration
     ncbi_api_key: str | None = Field(
         default=None, description="NCBI API key for higher rate limits"
     )
 
+    # Web Search Configuration
+    web_search_provider: Literal["serper", "searchxng", "brave", "tavily", "duckduckgo"] = Field(
+        default="duckduckgo",
+        description="Web search provider to use",
+    )
+    serper_api_key: str | None = Field(default=None, description="Serper API key for Google search")
+    searchxng_host: str | None = Field(default=None, description="SearchXNG host URL")
+    brave_api_key: str | None = Field(default=None, description="Brave Search API key")
+    tavily_api_key: str | None = Field(default=None, description="Tavily API key")
+
     # Agent Configuration
     max_iterations: int = Field(default=10, ge=1, le=50)
     search_timeout: int = Field(default=30, description="Seconds to wait for search")
+    use_graph_execution: bool = Field(
+        default=False, description="Use graph-based execution for research flows"
+    )
+
+    # Budget & Rate Limiting Configuration
+    default_token_limit: int = Field(
+        default=100000,
+        ge=1000,
+        le=1000000,
+        description="Default token budget per research loop",
+    )
+    default_time_limit_minutes: int = Field(
+        default=10,
+        ge=1,
+        le=120,
+        description="Default time limit per research loop (minutes)",
+    )
+    default_iterations_limit: int = Field(
+        default=10,
+        ge=1,
+        le=50,
+        description="Default iterations limit per research loop",
+    )
 
     # Logging
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
@@ -58,6 +108,34 @@ class Settings(BaseSettings):
     modal_token_id: str | None = Field(default=None, description="Modal token ID")
     modal_token_secret: str | None = Field(default=None, description="Modal token secret")
     chroma_db_path: str = Field(default="./chroma_db", description="ChromaDB storage path")
+    chroma_db_persist: bool = Field(
+        default=True,
+        description="Whether to persist ChromaDB to disk",
+    )
+    chroma_db_host: str | None = Field(
+        default=None,
+        description="ChromaDB server host (for remote ChromaDB)",
+    )
+    chroma_db_port: int | None = Field(
+        default=None,
+        description="ChromaDB server port (for remote ChromaDB)",
+    )
+
+    # RAG Service Configuration
+    rag_collection_name: str = Field(
+        default="deepcritical_evidence",
+        description="ChromaDB collection name for RAG",
+    )
+    rag_similarity_top_k: int = Field(
+        default=5,
+        ge=1,
+        le=50,
+        description="Number of top results to retrieve from RAG",
+    )
+    rag_auto_ingest: bool = Field(
+        default=True,
+        description="Automatically ingest evidence into RAG",
+    )
 
     @property
     def modal_available(self) -> bool:
@@ -101,6 +179,26 @@ class Settings(BaseSettings):
     def has_any_llm_key(self) -> bool:
         """Check if any LLM API key is available."""
         return self.has_openai_key or self.has_anthropic_key
+
+    @property
+    def has_huggingface_key(self) -> bool:
+        """Check if HuggingFace API key is available."""
+        return bool(self.huggingface_api_key)
+
+    @property
+    def web_search_available(self) -> bool:
+        """Check if web search is available (either no-key provider or API key present)."""
+        if self.web_search_provider == "duckduckgo":
+            return True  # No API key required
+        if self.web_search_provider == "serper":
+            return bool(self.serper_api_key)
+        if self.web_search_provider == "searchxng":
+            return bool(self.searchxng_host)
+        if self.web_search_provider == "brave":
+            return bool(self.brave_api_key)
+        if self.web_search_provider == "tavily":
+            return bool(self.tavily_api_key)
+        return False
 
 
 def get_settings() -> Settings:
