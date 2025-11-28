@@ -25,22 +25,22 @@ def test_get_model_openai(mock_settings):
     """Test that OpenAI model is returned when provider is openai."""
     mock_settings.llm_provider = "openai"
     mock_settings.openai_api_key = "sk-test"
-    mock_settings.openai_model = "gpt-4o"
+    mock_settings.openai_model = "gpt-5.1"
 
     model = get_model()
     assert isinstance(model, OpenAIModel)
-    assert model.model_name == "gpt-4o"
+    assert model.model_name == "gpt-5.1"
 
 
 def test_get_model_anthropic(mock_settings):
     """Test that Anthropic model is returned when provider is anthropic."""
     mock_settings.llm_provider = "anthropic"
     mock_settings.anthropic_api_key = "sk-ant-test"
-    mock_settings.anthropic_model = "claude-3-5-sonnet"
+    mock_settings.anthropic_model = "claude-sonnet-4-5-20250929"
 
     model = get_model()
     assert isinstance(model, AnthropicModel)
-    assert model.model_name == "claude-3-5-sonnet"
+    assert model.model_name == "claude-sonnet-4-5-20250929"
 
 
 def test_get_model_huggingface(mock_settings):
@@ -58,7 +58,7 @@ def test_get_model_default_fallback(mock_settings):
     """Test fallback to OpenAI if provider is unknown."""
     mock_settings.llm_provider = "unknown_provider"
     mock_settings.openai_api_key = "sk-test"
-    mock_settings.openai_model = "gpt-4o"
+    mock_settings.openai_model = "gpt-5.1"
 
     model = get_model()
     assert isinstance(model, OpenAIModel)
