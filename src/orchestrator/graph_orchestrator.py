@@ -250,7 +250,18 @@ class GraphOrchestrator:
                     max_time_minutes=self.max_time_minutes,
                 )
 
-            final_report = await self._iterative_flow.run(query)
+            try:
+                final_report = await self._iterative_flow.run(query)
+            except Exception as e:
+                self.logger.error("Iterative flow failed", error=str(e), exc_info=True)
+                # Yield error event - outer handler will also catch and yield error event
+                yield AgentEvent(
+                    type="error",
+                    message=f"Iterative research failed: {e!s}",
+                    iteration=1,
+                )
+                # Re-raise so outer handler can also yield error event for consistency
+                raise
 
             yield AgentEvent(
                 type="complete",
@@ -272,7 +283,17 @@ class GraphOrchestrator:
                     max_time_minutes=self.max_time_minutes,
                 )
 
-            final_report = await self._deep_flow.run(query)
+            try:
+                final_report = await self._deep_flow.run(query)
+            except Exception as e:
+                self.logger.error("Deep flow failed", error=str(e), exc_info=True)
+                # Yield error event before re-raising so test can capture it
+                yield AgentEvent(
+                    type="error",
+                    message=f"Deep research failed: {e!s}",
+                    iteration=1,
+                )
+                raise
 
             yield AgentEvent(
                 type="complete",

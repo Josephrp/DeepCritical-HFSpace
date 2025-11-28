@@ -39,7 +39,7 @@ class TestPlannerAgent:
     @pytest.mark.asyncio
     async def test_planner_agent_creates_report_plan(self, mock_model, mock_agent_run_result):
         """PlannerAgent should create a valid ReportPlan."""
-        with patch("src.orchestrator.planner_agent.get_pydantic_ai_model") as mock_get_model:
+        with patch("src.orchestrator.planner_agent.get_model") as mock_get_model:
             mock_get_model.return_value = mock_model
 
             mock_agent = AsyncMock()
@@ -72,7 +72,7 @@ class TestPlannerAgent:
         mock_agent = AsyncMock()
         mock_agent.run = AsyncMock(return_value=mock_result)
 
-        with patch("src.orchestrator.planner_agent.get_pydantic_ai_model") as mock_get_model:
+        with patch("src.orchestrator.planner_agent.get_model") as mock_get_model:
             mock_get_model.return_value = mock_model
 
             with patch("src.orchestrator.planner_agent.Agent") as mock_agent_class:
@@ -94,7 +94,7 @@ class TestPlannerAgent:
         mock_agent = AsyncMock()
         mock_agent.run = AsyncMock(side_effect=Exception("API Error"))
 
-        with patch("src.orchestrator.planner_agent.get_pydantic_ai_model") as mock_get_model:
+        with patch("src.orchestrator.planner_agent.get_model") as mock_get_model:
             mock_get_model.return_value = mock_model
 
             with patch("src.orchestrator.planner_agent.Agent") as mock_agent_class:
@@ -108,10 +108,9 @@ class TestPlannerAgent:
                 # Should return fallback plan
                 assert isinstance(result, ReportPlan)
                 assert len(result.report_outline) > 0
-                assert (
-                    "Failed" in result.background_context
-                    or "Overview" in result.report_outline[0].title
-                )
+                # Fallback plan has title "Research Findings" and empty background_context
+                assert result.report_outline[0].title == "Research Findings"
+                assert result.background_context == ""
 
     @pytest.mark.asyncio
     async def test_planner_agent_uses_tools(self, mock_model, mock_agent_run_result):
@@ -119,7 +118,7 @@ class TestPlannerAgent:
         mock_agent = AsyncMock()
         mock_agent.run = AsyncMock(return_value=mock_agent_run_result)
 
-        with patch("src.orchestrator.planner_agent.get_pydantic_ai_model") as mock_get_model:
+        with patch("src.orchestrator.planner_agent.get_model") as mock_get_model:
             mock_get_model.return_value = mock_model
 
             with patch("src.orchestrator.planner_agent.Agent") as mock_agent_class:
@@ -139,7 +138,7 @@ class TestPlannerAgent:
     @pytest.mark.asyncio
     async def test_create_planner_agent_factory(self, mock_model):
         """create_planner_agent should create a PlannerAgent instance."""
-        with patch("src.orchestrator.planner_agent.get_pydantic_ai_model") as mock_get_model:
+        with patch("src.orchestrator.planner_agent.get_model") as mock_get_model:
             mock_get_model.return_value = mock_model
 
             with patch("src.orchestrator.planner_agent.Agent") as mock_agent_class:
@@ -155,7 +154,7 @@ class TestPlannerAgent:
         """create_planner_agent should use default model when None provided."""
         mock_model = MagicMock()
 
-        with patch("src.orchestrator.planner_agent.get_pydantic_ai_model") as mock_get_model:
+        with patch("src.orchestrator.planner_agent.get_model") as mock_get_model:
             mock_get_model.return_value = mock_model
 
             with patch("src.orchestrator.planner_agent.Agent") as mock_agent_class:

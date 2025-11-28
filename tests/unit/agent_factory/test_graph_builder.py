@@ -240,7 +240,7 @@ class TestResearchGraph:
     def test_validate_empty_graph(self):
         """Test validating an empty graph."""
         graph = ResearchGraph(entry_node="start", exit_nodes=["end"])
-        errors = graph.validate()
+        errors = graph.validate_structure()
         assert len(errors) > 0  # Should have errors for missing entry/exit nodes
 
     def test_validate_valid_graph(self):
@@ -252,7 +252,7 @@ class TestResearchGraph:
         graph.add_node(end_node)
         graph.add_edge(SequentialEdge(from_node="start", to_node="end"))
 
-        errors = graph.validate()
+        errors = graph.validate_structure()
         assert len(errors) == 0
 
     def test_validate_unreachable_nodes(self):
@@ -266,7 +266,7 @@ class TestResearchGraph:
         graph.add_node(unreachable)
         graph.add_edge(SequentialEdge(from_node="start", to_node="end"))
 
-        errors = graph.validate()
+        errors = graph.validate_structure()
         assert len(errors) > 0
         assert any("unreachable" in error.lower() for error in errors)
 
@@ -435,5 +435,5 @@ class TestFactoryFunctions:
         assert graph.entry_node == "planner"
         assert "synthesizer" in graph.exit_nodes
         assert "planner" in graph.nodes
-        assert "parallel_loops_placeholder" in graph.nodes
+        assert "parallel_loops" in graph.nodes
         assert "synthesizer" in graph.nodes

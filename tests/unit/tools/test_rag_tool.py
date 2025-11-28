@@ -148,7 +148,7 @@ class TestRAGTool:
     @pytest.mark.asyncio
     async def test_search_lazy_initialization_success(self):
         """RAGTool should lazy-initialize RAG service when needed."""
-        with patch("src.tools.rag_tool.get_rag_service") as mock_get_service:
+        with patch("src.services.llamaindex_rag.get_rag_service") as mock_get_service:
             mock_service = MagicMock()
             mock_service.retrieve.return_value = [
                 {
@@ -173,7 +173,7 @@ class TestRAGTool:
     @pytest.mark.asyncio
     async def test_search_lazy_initialization_failure(self):
         """RAGTool should return empty list if RAG service unavailable."""
-        with patch("src.tools.rag_tool.get_rag_service") as mock_get_service:
+        with patch("src.services.llamaindex_rag.get_rag_service") as mock_get_service:
             mock_get_service.side_effect = ConfigurationError("OPENAI_API_KEY required")
 
             tool = RAGTool(rag_service=None)

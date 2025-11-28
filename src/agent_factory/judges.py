@@ -9,7 +9,7 @@ from huggingface_hub import InferenceClient
 from pydantic_ai import Agent
 from pydantic_ai.models.anthropic import AnthropicModel
 from pydantic_ai.models.huggingface import HuggingFaceModel
-from pydantic_ai.models.openai import OpenAIModel
+from pydantic_ai.models.openai import OpenAIChatModel as OpenAIModel
 from pydantic_ai.providers.anthropic import AnthropicProvider
 from pydantic_ai.providers.huggingface import HuggingFaceProvider
 from pydantic_ai.providers.openai import OpenAIProvider

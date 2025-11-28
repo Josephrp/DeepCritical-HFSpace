@@ -89,16 +89,18 @@ class TestGraphOrchestrator:
         assert orchestrator._iterative_flow is None
         assert orchestrator._deep_flow is None
 
-    def test_detect_research_mode_deep(self):
+    @pytest.mark.asyncio
+    async def test_detect_research_mode_deep(self):
         """Test detecting deep research mode from query."""
         orchestrator = GraphOrchestrator(mode="auto")
-        mode = orchestrator._detect_research_mode("Create a report with sections about X")
+        mode = await orchestrator._detect_research_mode("Create a report with sections about X")
         assert mode == "deep"
 
-    def test_detect_research_mode_iterative(self):
+    @pytest.mark.asyncio
+    async def test_detect_research_mode_iterative(self):
         """Test detecting iterative research mode from query."""
         orchestrator = GraphOrchestrator(mode="auto")
-        mode = orchestrator._detect_research_mode("What is the mechanism of action?")
+        mode = await orchestrator._detect_research_mode("What is the mechanism of action?")
         assert mode == "iterative"
 
     @pytest.mark.asyncio
@@ -200,18 +202,52 @@ class TestGraphOrchestrator:
             max_time_minutes=5,
             use_graph=False,
         )
+        # Ensure flow is None so it gets created fresh
+        orchestrator._iterative_flow = None
 
-        with patch("src.orchestrator.research_flow.IterativeResearchFlow") as mock_flow_class:
-            mock_flow = AsyncMock()
-            mock_flow.run = AsyncMock(side_effect=Exception("Test error"))
-            mock_flow_class.return_value = mock_flow
+        # Create the flow first, then patch its run method
+        from src.orchestrator.research_flow import IterativeResearchFlow
 
+        # Create flow and patch its run method to raise exception
+        original_flow = IterativeResearchFlow(
+            max_iterations=2,
+            max_time_minutes=5,
+        )
+        orchestrator._iterative_flow = original_flow
+
+        with patch.object(original_flow, "run", side_effect=Exception("Test error")):
             events = []
-            async for event in orchestrator.run("Test query"):
-                events.append(event)
+            # Collect events manually to ensure we get error events even when exception occurs
+            gen = orchestrator.run("Test query")
+            while True:
+                try:
+                    event = await gen.__anext__()
+                    events.append(event)
+                    # If we got an error event, continue to see if outer handler also yields one
+                    if event.type == "error":
+                        # Try to get outer handler's error event too
+                        try:
+                            next_event = await gen.__anext__()
+                            events.append(next_event)
+                        except (StopAsyncIteration, Exception):
+                            break
+                        break
+                except StopAsyncIteration:
+                    break
+                except Exception:
+                    # Exception occurred - outer handler should yield error event
+                    # Try to get it
+                    try:
+                        event = await gen.__anext__()
+                        events.append(event)
+                    except (StopAsyncIteration, Exception):
+                        break
+                    break
 
             error_events = [e for e in events if e.type == "error"]
-            assert len(error_events) > 0
+            assert (
+                len(error_events) > 0
+            ), f"No error events found. Events: {[e.type for e in events]}"
             assert (
                 "error" in error_events[0].message.lower()
                 or "failed" in error_events[0].message.lower()

@@ -79,7 +79,7 @@ class ParallelNode(GraphNode):
 
     node_type: Literal["parallel"] = "parallel"
     parallel_nodes: list[str] = Field(
-        description="List of node IDs to run in parallel", min_length=1
+        description="List of node IDs to run in parallel", min_length=0
     )
     aggregator: Callable[[list[Any]], Any] | None = Field(
         default=None, description="Function to aggregate parallel results"

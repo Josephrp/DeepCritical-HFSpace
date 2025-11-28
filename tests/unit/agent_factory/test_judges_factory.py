@@ -10,7 +10,7 @@ from pydantic_ai.models.anthropic import AnthropicModel
 # We expect this import to exist after we implement it, or we mock it if it's not there yet
 # For TDD, we assume we will use the library class
 from pydantic_ai.models.huggingface import HuggingFaceModel
-from pydantic_ai.models.openai import OpenAIModel
+from pydantic_ai.models.openai import OpenAIChatModel as OpenAIModel
 
 from src.agent_factory.judges import get_model
 

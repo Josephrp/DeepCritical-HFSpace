@@ -3,7 +3,7 @@
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from pydantic_ai import AgentResult
+from pydantic_ai import AgentRunResult
 
 from src.agents.long_writer import LongWriterAgent, LongWriterOutput, create_long_writer_agent
 from src.utils.models import ReportDraft, ReportDraftSection
@@ -27,9 +27,11 @@ def mock_long_writer_output() -> LongWriterOutput:
 
 
 @pytest.fixture
-def mock_agent_result(mock_long_writer_output: LongWriterOutput) -> AgentResult[LongWriterOutput]:
+def mock_agent_result(
+    mock_long_writer_output: LongWriterOutput,
+) -> AgentRunResult[LongWriterOutput]:
     """Create a mock agent result."""
-    result = MagicMock(spec=AgentResult)
+    result = MagicMock(spec=AgentRunResult)
     result.output = mock_long_writer_output
     return result
 
@@ -90,7 +92,7 @@ class TestWriteNextSection:
     async def test_write_next_section_basic(
         self,
         long_writer_agent: LongWriterAgent,
-        mock_agent_result: AgentResult[LongWriterOutput],
+        mock_agent_result: AgentRunResult[LongWriterOutput],
     ) -> None:
         """Test basic section writing."""
         long_writer_agent.agent.run = AsyncMock(return_value=mock_agent_result)
@@ -116,7 +118,7 @@ class TestWriteNextSection:
     async def test_write_next_section_first_section(
         self,
         long_writer_agent: LongWriterAgent,
-        mock_agent_result: AgentResult[LongWriterOutput],
+        mock_agent_result: AgentRunResult[LongWriterOutput],
     ) -> None:
         """Test writing the first section (no existing draft)."""
         long_writer_agent.agent.run = AsyncMock(return_value=mock_agent_result)
@@ -142,7 +144,7 @@ class TestWriteNextSection:
     async def test_write_next_section_with_existing_draft(
         self,
         long_writer_agent: LongWriterAgent,
-        mock_agent_result: AgentResult[LongWriterOutput],
+        mock_agent_result: AgentRunResult[LongWriterOutput],
     ) -> None:
         """Test writing section with existing draft."""
         long_writer_agent.agent.run = AsyncMock(return_value=mock_agent_result)
@@ -168,7 +170,7 @@ class TestWriteNextSection:
     async def test_write_next_section_returns_references(
         self,
         long_writer_agent: LongWriterAgent,
-        mock_agent_result: AgentResult[LongWriterOutput],
+        mock_agent_result: AgentRunResult[LongWriterOutput],
     ) -> None:
         """Test that write_next_section returns references."""
         long_writer_agent.agent.run = AsyncMock(return_value=mock_agent_result)
@@ -187,7 +189,7 @@ class TestWriteNextSection:
     async def test_write_next_section_handles_empty_draft(
         self,
         long_writer_agent: LongWriterAgent,
-        mock_agent_result: AgentResult[LongWriterOutput],
+        mock_agent_result: AgentRunResult[LongWriterOutput],
     ) -> None:
         """Test writing section with empty draft."""
         long_writer_agent.agent.run = AsyncMock(return_value=mock_agent_result)
@@ -226,7 +228,7 @@ class TestWriteReport:
     async def test_write_report_complete_flow(
         self,
         long_writer_agent: LongWriterAgent,
-        mock_agent_result: AgentResult[LongWriterOutput],
+        mock_agent_result: AgentRunResult[LongWriterOutput],
         sample_report_draft: ReportDraft,
     ) -> None:
         """Test complete report writing flow."""
@@ -253,7 +255,7 @@ class TestWriteReport:
     async def test_write_report_single_section(
         self,
         long_writer_agent: LongWriterAgent,
-        mock_agent_result: AgentResult[LongWriterOutput],
+        mock_agent_result: AgentRunResult[LongWriterOutput],
     ) -> None:
         """Test writing report with single section."""
         long_writer_agent.agent.run = AsyncMock(return_value=mock_agent_result)
@@ -281,7 +283,7 @@ class TestWriteReport:
     async def test_write_report_multiple_sections(
         self,
         long_writer_agent: LongWriterAgent,
-        mock_agent_result: AgentResult[LongWriterOutput],
+        mock_agent_result: AgentRunResult[LongWriterOutput],
         sample_report_draft: ReportDraft,
     ) -> None:
         """Test writing report with multiple sections."""
@@ -302,7 +304,7 @@ class TestWriteReport:
     async def test_write_report_creates_table_of_contents(
         self,
         long_writer_agent: LongWriterAgent,
-        mock_agent_result: AgentResult[LongWriterOutput],
+        mock_agent_result: AgentRunResult[LongWriterOutput],
         sample_report_draft: ReportDraft,
     ) -> None:
         """Test that write_report creates table of contents."""
@@ -335,7 +337,11 @@ class TestWriteReport:
             references=["[1] https://example.com/2"],
         )
 
-        results = [AgentResult(output=output1), AgentResult(output=output2)]
+        result1 = MagicMock(spec=AgentRunResult)
+        result1.output = output1
+        result2 = MagicMock(spec=AgentRunResult)
+        result2.output = output2
+        results = [result1, result2]
         long_writer_agent.agent.run = AsyncMock(side_effect=results)
 
         result = await long_writer_agent.write_report(

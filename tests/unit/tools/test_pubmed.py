@@ -142,23 +142,40 @@ class TestPubMedTool:
 
         mocker.patch("httpx.AsyncClient", return_value=mock_client)
 
+        from src.tools.rate_limiter import reset_pubmed_limiter
+
+        # Reset the rate limiter to ensure clean state
+        reset_pubmed_limiter()
+
+        mock_search_response = MagicMock()
+        mock_search_response.json.return_value = {"esearchresult": {"idlist": []}}
+        mock_search_response.raise_for_status = MagicMock()
+        mock_client = AsyncMock()
+        mock_client.get = AsyncMock(return_value=mock_search_response)
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=None)
+        mocker.patch("httpx.AsyncClient", return_value=mock_client)
+
         tool = PubMedTool()
-        # Reset last request time to ensure rate limit is triggered
-        tool._last_request_time = 0.0
+        tool._limiter.reset()  # Reset storage to start fresh
 
-        # Mock time to control elapsed time
-        with patch("asyncio.get_running_loop") as mock_loop:
-            loop_mock = MagicMock()
-            loop_mock.time.side_effect = [0.0, 0.1]  # Only 0.1s elapsed, need 0.34s
-            mock_loop.return_value = loop_mock
+        # For 3 requests/second rate limit, we need to make 4 requests quickly to trigger the limit
+        # Make first 3 requests - should all succeed without sleep (within rate limit)
+        with patch("asyncio.sleep") as mock_sleep_first:
+            for i in range(3):
+                await tool.search(f"test query {i+1}")
+            # First 3 requests should not sleep (within 3/second limit)
+            assert mock_sleep_first.call_count == 0
 
-            # Mock sleep to verify it's called
-            with patch("asyncio.sleep") as mock_sleep:
-                await tool.search("test query")
-                # Should sleep for at least (0.34 - 0.1) = 0.24 seconds
-                mock_sleep.assert_called_once()
-                call_arg = mock_sleep.call_args[0][0]
-                assert call_arg >= 0.24
+        # Make 4th request immediately - should trigger rate limit
+        # For 3 requests/second, the 4th request should wait
+        with patch("asyncio.sleep") as mock_sleep:
+            await tool.search("test query 4")
+            # Rate limiter uses polling with 0.01s sleep, so sleep should be called
+            # multiple times until enough time has passed (at least once)
+            assert (
+                mock_sleep.call_count > 0
+            ), f"Rate limiter should call sleep when rate limit is hit. Call count: {mock_sleep.call_count}"
 
     @pytest.mark.asyncio
     async def test_api_key_included_in_params(self, mocker):

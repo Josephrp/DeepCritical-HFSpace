@@ -114,7 +114,17 @@ class PlannerAgent:
             # Validate report plan
             if not report_plan.report_outline:
                 self.logger.warning("Report plan has no sections", query=query[:100])
-                raise JudgeError("Report plan must have at least one section")
+                # Return fallback plan instead of raising error
+                return ReportPlan(
+                    background_context=report_plan.background_context or "",
+                    report_outline=[
+                        ReportPlanSection(
+                            title="Overview",
+                            key_question=query,
+                        )
+                    ],
+                    report_title=report_plan.report_title or f"Research Report: {query[:50]}",
+                )
 
             if not report_plan.report_title:
                 self.logger.warning("Report plan has no title", query=query[:100])

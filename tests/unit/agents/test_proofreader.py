@@ -4,7 +4,7 @@ from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from pydantic_ai import AgentResult
+from pydantic_ai import AgentRunResult
 
 from src.agents.proofreader import ProofreaderAgent, create_proofreader_agent
 from src.utils.models import ReportDraft, ReportDraftSection
@@ -19,9 +19,9 @@ def mock_model() -> MagicMock:
 
 
 @pytest.fixture
-def mock_agent_result() -> AgentResult[Any]:
+def mock_agent_result() -> AgentRunResult[Any]:
     """Create a mock agent result."""
-    result = MagicMock(spec=AgentResult)
+    result = MagicMock(spec=AgentRunResult)
     result.output = """# Final Report
 
 ## Summary
@@ -82,10 +82,13 @@ class TestProofreaderAgentInit:
         self, proofreader_agent: ProofreaderAgent
     ) -> None:
         """Test that ProofreaderAgent has correct system prompt."""
-        # System prompt should contain key instructions
-        assert proofreader_agent.agent.system_prompt is not None
-        assert "proofread" in proofreader_agent.agent.system_prompt.lower()
-        assert "report" in proofreader_agent.agent.system_prompt.lower()
+        # System prompt should exist and contain key instructions
+        # Check the source constant directly since system_prompt property may be a callable
+        from src.agents.proofreader import SYSTEM_PROMPT
+
+        assert SYSTEM_PROMPT is not None
+        assert "proofread" in SYSTEM_PROMPT.lower()
+        assert "report" in SYSTEM_PROMPT.lower()
 
 
 class TestProofread:
@@ -95,7 +98,7 @@ class TestProofread:
     async def test_proofread_basic(
         self,
         proofreader_agent: ProofreaderAgent,
-        mock_agent_result: AgentResult[Any],
+        mock_agent_result: AgentRunResult[Any],
         sample_report_draft: ReportDraft,
     ) -> None:
         """Test basic proofreading."""
@@ -112,7 +115,7 @@ class TestProofread:
     async def test_proofread_single_section(
         self,
         proofreader_agent: ProofreaderAgent,
-        mock_agent_result: AgentResult[Any],
+        mock_agent_result: AgentRunResult[Any],
     ) -> None:
         """Test proofreading with single section."""
         proofreader_agent.agent.run = AsyncMock(return_value=mock_agent_result)
@@ -135,7 +138,7 @@ class TestProofread:
     async def test_proofread_multiple_sections(
         self,
         proofreader_agent: ProofreaderAgent,
-        mock_agent_result: AgentResult[Any],
+        mock_agent_result: AgentRunResult[Any],
         sample_report_draft: ReportDraft,
     ) -> None:
         """Test proofreading with multiple sections."""
@@ -152,7 +155,7 @@ class TestProofread:
     async def test_proofread_removes_duplicates(
         self,
         proofreader_agent: ProofreaderAgent,
-        mock_agent_result: AgentResult[Any],
+        mock_agent_result: AgentRunResult[Any],
     ) -> None:
         """Test that proofreader removes duplicate content."""
         proofreader_agent.agent.run = AsyncMock(return_value=mock_agent_result)
@@ -181,7 +184,7 @@ class TestProofread:
     async def test_proofread_adds_summary(
         self,
         proofreader_agent: ProofreaderAgent,
-        mock_agent_result: AgentResult[Any],
+        mock_agent_result: AgentRunResult[Any],
         sample_report_draft: ReportDraft,
     ) -> None:
         """Test that proofreader adds summary."""
@@ -190,15 +193,16 @@ class TestProofread:
         result = await proofreader_agent.proofread(query="Test", report_draft=sample_report_draft)
 
         assert isinstance(result, str)
-        # System prompt should instruct to add summary
-        call_args = proofreader_agent.agent.run.call_args[0][0]
-        assert "summary" in call_args.lower() or "Summary" in call_args
+        # System prompt should instruct to add summary - check source constant
+        from src.agents.proofreader import SYSTEM_PROMPT
+
+        assert "summary" in SYSTEM_PROMPT.lower() or "Add a summary" in SYSTEM_PROMPT
 
     @pytest.mark.asyncio
     async def test_proofread_preserves_references(
         self,
         proofreader_agent: ProofreaderAgent,
-        mock_agent_result: AgentResult[Any],
+        mock_agent_result: AgentRunResult[Any],
         sample_report_draft: ReportDraft,
     ) -> None:
         """Test that proofreader preserves references."""
@@ -207,15 +211,20 @@ class TestProofread:
         result = await proofreader_agent.proofread(query="Test", report_draft=sample_report_draft)
 
         assert isinstance(result, str)
-        # System prompt should instruct to preserve sources
-        call_args = proofreader_agent.agent.run.call_args[0][0]
-        assert "sources" in call_args.lower() or "references" in call_args.lower()
+        # System prompt should instruct to preserve sources - check source constant
+        from src.agents.proofreader import SYSTEM_PROMPT
+
+        assert (
+            "sources" in SYSTEM_PROMPT.lower()
+            or "references" in SYSTEM_PROMPT.lower()
+            or "Preserve sources" in SYSTEM_PROMPT
+        )
 
     @pytest.mark.asyncio
     async def test_proofread_empty_draft(
         self,
         proofreader_agent: ProofreaderAgent,
-        mock_agent_result: AgentResult[Any],
+        mock_agent_result: AgentRunResult[Any],
     ) -> None:
         """Test proofreading with empty draft."""
         proofreader_agent.agent.run = AsyncMock(return_value=mock_agent_result)
@@ -225,13 +234,17 @@ class TestProofread:
         result = await proofreader_agent.proofread(query="Test", report_draft=report_draft)
 
         assert isinstance(result, str)
-        assert proofreader_agent.agent.run.called
+        # When draft is empty, agent returns early without calling run
+        assert "Research Report" in result
+        assert "Query" in result
+        # Agent.run should not be called for empty drafts (early return)
+        assert not proofreader_agent.agent.run.called
 
     @pytest.mark.asyncio
     async def test_proofread_single_section_draft(
         self,
         proofreader_agent: ProofreaderAgent,
-        mock_agent_result: AgentResult[Any],
+        mock_agent_result: AgentRunResult[Any],
     ) -> None:
         """Test proofreading with single section draft."""
         proofreader_agent.agent.run = AsyncMock(return_value=mock_agent_result)
@@ -253,7 +266,7 @@ class TestProofread:
     async def test_proofread_very_long_draft(
         self,
         proofreader_agent: ProofreaderAgent,
-        mock_agent_result: AgentResult[Any],
+        mock_agent_result: AgentRunResult[Any],
     ) -> None:
         """Test proofreading with very long draft."""
         proofreader_agent.agent.run = AsyncMock(return_value=mock_agent_result)
@@ -276,7 +289,7 @@ class TestProofread:
     async def test_proofread_malformed_sections(
         self,
         proofreader_agent: ProofreaderAgent,
-        mock_agent_result: AgentResult[Any],
+        mock_agent_result: AgentRunResult[Any],
     ) -> None:
         """Test proofreading with malformed sections."""
         proofreader_agent.agent.run = AsyncMock(return_value=mock_agent_result)

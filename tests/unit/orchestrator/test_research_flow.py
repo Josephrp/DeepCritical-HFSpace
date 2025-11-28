@@ -46,7 +46,7 @@ class TestIterativeResearchFlow:
                 "task_1": ToolAgentOutput(output="Finding 1", sources=["url1"]),
             }
 
-            return IterativeResearchFlow(max_iterations=2, max_time_minutes=5)
+            yield IterativeResearchFlow(max_iterations=2, max_time_minutes=5)
 
     @pytest.mark.asyncio
     async def test_iterative_flow_completes_when_research_complete(self, flow, mock_agents):
@@ -208,7 +208,7 @@ class TestDeepResearchFlow:
             mock_long_writer.return_value = mock_agents["long_writer"]
             mock_proofreader.return_value = mock_agents["proofreader"]
 
-            return DeepResearchFlow(max_iterations=2, max_time_minutes=5)
+            yield DeepResearchFlow(max_iterations=2, max_time_minutes=5)
 
     @pytest.mark.asyncio
     async def test_deep_flow_creates_report_plan(self, flow, mock_agents):
